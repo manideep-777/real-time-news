@@ -141,7 +141,7 @@
                 <div class="category-header">{{ cat.category_name }}</div>
                 
                 <div class="content-text">
-                    {{ cat.summarized_content }}
+                    {{ cat.summarized_content.replace('. ', '.<br><br>') | safe }}
                 </div>
             </div>
             {% endfor %}

@@ -166,27 +166,43 @@ def summarize_news():
 
         # Prompt for 8 categories
         prompt = f"""
-You are an expert news summarizer.
+You are a top-tier news summarization AI with a focus on regional policy and social impact.
+
 Here is a collection of various news articles:
 
 \"\"\"{content}\"\"\"
 
-Please analyze the entire content and output a JSON object with **8 categories**.
-For each category, provide:
-- category_name
-- summarized_content (max 3 sentences)
+Your task:
+1. Filter out content that is **not related to Andhra Pradesh**.
+2. From the filtered content, extract and summarize only **major issues**, such as:
+   - Governance failures
+   - Protests, corruption, or political unrest
+   - Infrastructure, education, health system concerns
+   - Crime, natural disasters, or any major public impact
 
-Example format:
+Output a **JSON object with up to 8 categories**, depending on what is found.
+
+Each category must include:
+- category_name (e.g., "Healthcare", "Corruption", "Infrastructure")
+- summarized_content (max 3 sentences, focused only on the core issue)
+
+Important:
+- Do NOT include general news, entertainment, sports, or non-issue headlines.
+- Only include Andhra Pradesh-specific issues.
+- Output **only** the pure JSON object with the structure below.
+
+Example:
 {{
     "categories": [
-        {{"category_name": "Politics", "summarized_content": "..."}},
-        {{"category_name": "Business", "summarized_content": "..."}},
+        {{
+            "category_name": "Law & Order",
+            "summarized_content": "A series of violent protests erupted in Vizag over the delay in special status allocation."
+        }},
         ...
     ]
 }}
+"""
 
-Only output the pure JSON object.
-        """
 
         response = model.generate_content(prompt)
 
