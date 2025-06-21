@@ -118,24 +118,24 @@
     left: 100%;
   }
   
-  .btn-primary {
+  .btn-primary2 {
     background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
     color: white;
     box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
   }
   
-  .btn-primary:hover {
+  .btn-primary2:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
   }
   
-  .btn-secondary {
+  .btn-secondary2 {
     background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
     color: white;
     box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
   }
   
-  .btn-secondary:hover {
+  .btn-secondary2:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
   }

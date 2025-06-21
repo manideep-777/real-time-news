@@ -1,53 +1,55 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom"
 import "./NewsFileViewer.css";
 
 function NewsFileViewer() {
+  const BASE_URL = import.meta.env.VITE_BASE_URL
+  const navigate = useNavigate();
   const [newsCards, setNewsCards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const parseNewsFile = (rawText) => {
-    const articles = rawText.split("-".repeat(100)).map((block) => {
-      const lines = block.trim().split("\n");
-      const article = {};
+  // const parseNewsFile = (rawText) => {
+  //   const articles = rawText.split("-".repeat(100)).map((block) => {
+  //     const lines = block.trim().split("\n");
+  //     const article = {};
 
-      lines.forEach((line) => {
-        if (line.startsWith("News Category:")) {
-          article.category = line.replace("News Category:", "").trim();
-        } else if (line.startsWith("Headline:")) {
-          article.headline = line.replace("Headline:", "").trim();
-        } else if (line.startsWith("Source:")) {
-          article.source = line.replace("Source:", "").trim();
-        } else if (line.startsWith("URL:")) {
-          article.url = line.replace("URL:", "").trim();
-        } else if (line.startsWith("Published Date:")) {
-          article.pubDate = line.replace("Published Date:", "").trim();
-        } else if (line.startsWith("Severity:")) {
-          article.severity = line.replace("Severity:", "").trim();
-        } else if (line.startsWith("Content:")) {
-          article.content = line.replace("Content:", "").trim();
-        } else if (article.content !== undefined) {
-          article.content += "\n" + line.trim();
-        }
-      });
+  //     lines.forEach((line) => {
+  //       if (line.startsWith("News Category:")) {
+  //         article.category = line.replace("News Category:", "").trim();
+  //       } else if (line.startsWith("Headline:")) {
+  //         article.headline = line.replace("Headline:", "").trim();
+  //       } else if (line.startsWith("Source:")) {
+  //         article.source = line.replace("Source:", "").trim();
+  //       } else if (line.startsWith("URL:")) {
+  //         article.url = line.replace("URL:", "").trim();
+  //       } else if (line.startsWith("Published Date:")) {
+  //         article.pubDate = line.replace("Published Date:", "").trim();
+  //       } else if (line.startsWith("Severity:")) {
+  //         article.severity = line.replace("Severity:", "").trim();
+  //       } else if (line.startsWith("Content:")) {
+  //         article.content = line.replace("Content:", "").trim();
+  //       } else if (article.content !== undefined) {
+  //         article.content += "\n" + line.trim();
+  //       }
+  //     });
 
-      return article;
-    });
+  //     return article;
+  //   });
 
-    // Filter out empty blocks
-    return articles.filter((art) => art.headline);
-  };
+  //   // Filter out empty blocks
+  //   return articles.filter((art) => art.headline);
+  // };
 
   const fetchNewsFile = async () => {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("http://127.0.0.1:5000/fetch-news");
+      const response = await fetch(`${BASE_URL}/recent-published-articles`);
       const data = await response.json();
 
       if (data.status === "success") {
-        const parsedArticles = parseNewsFile(data.news_file_content);
-        setNewsCards(parsedArticles);
+        setNewsCards(data.articles || []);
       } else {
         setError(data.message || "Error fetching news");
       }
@@ -60,7 +62,7 @@ function NewsFileViewer() {
 
   const downloadPDF = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:5000/generate-pdf", {
+      const response = await fetch(`${BASE_URL}/generate-pdf`, {
         method: "GET",
       });
 
@@ -97,7 +99,7 @@ function NewsFileViewer() {
       </div>
 
       <div className="action-bar">
-        <button onClick={fetchNewsFile} className="btn btn-primary" disabled={loading}>
+        <button onClick={fetchNewsFile} className="btn btn-primary2" disabled={loading}>
           <span className="btn-icon">📰</span>
           Fetch Latest News
         </button>
@@ -105,6 +107,11 @@ function NewsFileViewer() {
         <button onClick={downloadPDF} className="btn btn-secondary" disabled={loading}>
           <span className="btn-icon">📄</span>
           Download PDF Report
+        </button>
+        
+        <button onClick={() => navigate("/calender")} className="btn btn-secondary2" disabled={loading}>
+          <span className="btn-icon">📰</span>
+          Get Articles by Date
         </button>
       </div>
 
@@ -147,7 +154,12 @@ function NewsFileViewer() {
             </div>
 
             <div className="card-content">
-              <p className="article-content">{article.content}</p>
+              <p className="article-content">{article.content || article.description}</p>
+            </div>
+
+            <div className="card-content">
+              <h3>Issue</h3>
+              <p className="article-content">{article.issue_reason}</p>
             </div>
 
             {article.url && (
