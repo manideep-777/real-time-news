@@ -67,7 +67,9 @@ project-root/
 5. **Install Playwright and its browsers:**
 
    ```bash
-   playwright install
+   <!-- playwright install -->
+   python -m playwright install chromium
+
    ```
 
 6. **Run the Flask server:**
