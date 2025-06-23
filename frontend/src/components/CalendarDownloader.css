@@ -131,6 +131,10 @@
   .btn-icon {
     font-size: 1.2rem;
   }
+
+  .btn-third{
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
   
   /* News Section */
   .news-section {

@@ -88,6 +88,11 @@ function NewsFileViewer() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token")
+    navigate("/")
+  }
+
   return (
     <div className="news-viewer-container">
       <div className="header-section">
@@ -104,14 +109,18 @@ function NewsFileViewer() {
           Fetch Latest News
         </button>
 
-        <button onClick={downloadPDF} className="btn btn-secondary" disabled={loading}>
-          <span className="btn-icon">📄</span>
-          Download PDF Report
-        </button>
         
-        <button onClick={() => navigate("/calender")} className="btn btn-secondary2" disabled={loading}>
-          <span className="btn-icon">📰</span>
+        <button onClick={downloadPDF} className="btn btn-secondary2" disabled={loading}>
+        <span className="btn-icon">📰</span>
+        Download PDF Report
+        </button>
+
+        <button onClick={() => navigate("/calender")} className="btn btn-secondary3" disabled={loading}>
+          <span className="btn-icon">📅</span>
           Get Articles by Date
+        </button>
+        <button onClick={handleLogout} className="btn btn-third" disabled={loading}>
+          Log out
         </button>
       </div>
 

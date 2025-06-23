@@ -49,6 +49,7 @@ const Authentication = () => {
       const data = await res.json()
   
       if (data.status === "success") {
+        localStorage.setItem("token", data.token)
         toast.success("Signup successful!")
         navigate("/dashboard")
       } else {
@@ -71,6 +72,7 @@ const Authentication = () => {
       const data = await res.json()
   
       if (data.status === "success") {
+        localStorage.setItem("token", data.token)
         localStorage.setItem("token", data.token)
         toast.success("Login successful!")
         navigate("/dashboard")

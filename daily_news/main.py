@@ -24,7 +24,7 @@ if os.getenv("FLASK_ENV") != "production":
     load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True)
 translator = Translator()
 
 API_KEY = os.getenv("NEWS_API_KEY")
@@ -119,7 +119,14 @@ def signup():
         "created_at": datetime.utcnow()
     }
     users_collection.insert_one(user_data)
-    return jsonify({"status": "success", "message": "User registered"})
+
+    payload = {
+        "email": email,
+        "exp": datetime.utcnow() + timedelta(days=1)
+    }
+
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return jsonify({"status": "success", "message": "User registered", "token": token})
 
 
 @app.route("/login", methods=["POST"])
@@ -139,6 +146,21 @@ def login():
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
     return jsonify({"status": "success", "token": token})
+
+@app.route("/is-authenticated", methods=["GET"])
+def is_authenticated():
+    token = request.headers.get("Authorization")
+
+    if not token:
+        return jsonify({"authenticated": False, "message": "Token missing"}), 401
+
+    try:
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return jsonify({"authenticated": True, "email": decoded["email"]}), 200
+    except jwt.ExpiredSignatureError:
+        return jsonify({"authenticated": False, "message": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"authenticated": False, "message": "Invalid token"}), 401
 
 @app.route("/published-articles-by-date")
 def published_articles_by_date():
@@ -201,7 +223,8 @@ def generate_pdf_by_date():
         return jsonify({"status": "error", "message": "Insufficient categories returned"}), 500
 
     # Step 2: Render HTML
-    rendered_html = render_template("code.html", date=date_str, categories=categories)
+    formatted_date = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d-%m-%Y")
+    rendered_html = render_template("code.html", date=formatted_date, categories=categories)
 
     # Step 3: Generate PDF in-memory
     pdf_buffer = BytesIO()
@@ -627,5 +650,6 @@ if __name__ == "__main__":
 
     # Shut down the scheduler when exiting the app
     atexit.register(lambda: scheduler.shutdown())
-    app.run(debug=False, use_reloader=False)
+    # app.run(debug=False, use_reloader=False)
+    app.run(debug=True, use_reloader=False)
     # app.run(debug=True)

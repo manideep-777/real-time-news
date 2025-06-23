@@ -2,9 +2,11 @@
 import { useState, useEffect } from "react"
 import "./CalendarDownloader.css"
 import { toast } from "react-hot-toast"
+import { useNavigate } from "react-router-dom"
 
 const CalendarDownloader = () => {
-    const BASE_URL = import.meta.env.VITE_BASE_URL
+  const navigate = useNavigate();
+  const BASE_URL = import.meta.env.VITE_BASE_URL
   const [selectedDate, setSelectedDate] = useState("")
   const [articles, setArticles] = useState([])
 
@@ -17,7 +19,7 @@ const CalendarDownloader = () => {
   const handleDownload = async (e) => {
     e.preventDefault()
     if (!selectedDate) {
-        toast.error("Please select a valid date.")
+      toast.error("Please select a valid date.")
       return
     }
 
@@ -67,6 +69,11 @@ const CalendarDownloader = () => {
     return new Date(dateString).toLocaleDateString("en-US", options)
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem("token")
+    navigate("/")
+  }
+
   return (
     <div className="dashboard-container">
       {/* Header Section */}
@@ -106,12 +113,16 @@ const CalendarDownloader = () => {
         <div className="button-group">
           <button type="button" onClick={handleFetchNews} className="btn btn-fetch">
             <span className="btn-icon">📰</span>
-            Fetch Latest News
+            Fetch News
           </button>
 
           <button type="button" onClick={handleDownload} className="btn btn-download">
             <span className="btn-icon">📄</span>
             Download PDF Report
+          </button>
+
+          <button onClick={handleLogout} className="btn btn-third">
+            Log out
           </button>
         </div>
       </div>
@@ -136,6 +147,11 @@ const CalendarDownloader = () => {
                   <p className="article-summary">
                     {article.content || article.description || "Click to read the full article for more details."}
                   </p>
+                </div>
+
+                <div className="article-content">
+                  <h3>Issue</h3>
+                  <p className="article-summary">{article.issue_reason}</p>
                 </div>
 
                 <div className="article-footer">

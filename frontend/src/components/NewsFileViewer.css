@@ -139,6 +139,16 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
   }
+
+  .btn-secondary3{
+    background: linear-gradient(135deg, #3594e8 0%, #27bff1 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+  }
+
+  .btn-third{
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  }
   
   .btn:disabled {
     opacity: 0.6;
