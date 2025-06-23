@@ -1,0 +1,81 @@
+1. We are using two parts:
+🟢 Backend: Built with Python (Flask)
+
+🔵 Frontend: Built with React (JavaScript)
+
+here first we need to deploy backend then that url will be used for the frontend environment variables
+
+2. What software they need to install:
+
+Please install the following:
+
+Python 3.8 or newer
+
+Node.js (version 18 or newer) and npm
+
+Google Chrome or Chromium browser
+
+MongoDB Atlas will be used — allow access to it
+
+Internet access must be enabled (for API calls)
+
+Allow the app to write files to a folder (for PDF reports)
+
+3. Allow Internet Access to:
+
+The server must allow outgoing internet access to:
+
+newsdata.io → for news fetching
+
+generativelanguage.googleapis.com → for Gemini AI
+
+mongodb.net → for connecting to MongoDB Atlas
+
+4. System Access Needed:
+
+The app will:
+
+Run as a background service (continuously)
+
+5. Security Notes:
+
+I will provide the API keys (NewsData, Gemini, MongoDB).
+Please help configure these securely (as environment variables if possible).
+
+The environment variables of backebend:-
+    MONGO_URI=mongodb+srv://apikey07:HZgSO1eRfG5jnnhy@cluster0.163gb8q.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+    FLASK_ENV=production
+    SECRET_KEY=5f7e9cbe0fcbf5e13e8a18f2df4c38e57e2dbf40486b91c2d774c1c4d5f8583a
+    NEWS_API_KEY=pub_9ccfaf2c7e244064a45bd8407a2e7a91
+    GEMINI_KEY=AIzaSyBzWdFvrveb9axN9z6zPL7auQHgoliOVk0
+
+The environment variables of frontend:-
+    VITE_BASE_URL="paste the url of deployed backendb url"
+
+6. Commands to run:
+backebend:
+    commands to installing packages:
+        1. pip install -r requirements.txt
+        2. python -m playwright install chromium
+    to run Backend:
+        1. python main.py
+
+frontend:
+    commands to installing packages:
+        1. npm install
+        2. npm install -g serve
+    to run frontend:
+        1. npm run build
+        2. serve -s dist
+
+✅ In short, just give them this list:
+diff
+CopyEdit
+Please prepare the server with:
+- Python 3.8+
+- Node.js 18+ and npm
+- Google Chrome or Chromium
+- Internet access enabled
+- Allow access to mongodb.net, newsdata.io, and generativelanguage.googleapis.com
+- Ability to run our app continuously
+- I will provide the secret API keys needed and commands
