@@ -650,6 +650,6 @@ if __name__ == "__main__":
 
     # Shut down the scheduler when exiting the app
     atexit.register(lambda: scheduler.shutdown())
-    # app.run(debug=False, use_reloader=False)
-    app.run(debug=True, use_reloader=False)
+    app.run(debug=False, use_reloader=False)
+    # app.run(debug=True, use_reloader=False)
     # app.run(debug=True)
