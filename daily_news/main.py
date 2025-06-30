@@ -9,7 +9,7 @@ from flask_cors import CORS
 import pdfkit
 import google.generativeai
 from pymongo import MongoClient
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 from langdetect import detect
 import json
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -25,7 +25,7 @@ if os.getenv("FLASK_ENV") != "production":
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
-translator = Translator()
+translator = GoogleTranslator(source='auto', target='en')
 
 API_KEY = os.getenv("NEWS_API_KEY")
 MAX_CONTENT_LENGTH = 1000  
@@ -96,7 +96,7 @@ def check_if_issue(article):
 
 def safe_translate(text):
     try:
-        return translator.translate(text, src='auto', dest='en').text
+        return translator.translate(text)
     except Exception as e:
         print(f"[Translation Error] {e}")
         return text
