@@ -14,8 +14,10 @@
 }
 
 .footer-content p {
-  margin-bottom: 15px;
-  font-size: 0.9rem;
+  margin: 0px; 
+  font-size: 20px;
+  color: #dcdcdc;
+  text-align: center;
 }
 
 .footer-links {

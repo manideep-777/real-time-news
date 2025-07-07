@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react"
-import "./CalendarDownloader.css"
-import { toast } from "react-hot-toast"
-import { useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react";
+import "./CalendarDownloader.css";
+import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import Modal from './Modal';
 import Footer from "./Footer";
 
 const CalendarDownloader = () => {
   const navigate = useNavigate();
-  const BASE_URL = import.meta.env.VITE_BASE_URL
-  const [selectedDate, setSelectedDate] = useState("")
-  const [articles, setArticles] = useState([])
-  const [isDownloading, setIsDownloading] = useState(false)
+  const BASE_URL = import.meta.env.VITE_BASE_URL;
+  const [selectedDate, setSelectedDate] = useState("");
+  const [articles, setArticles] = useState([]);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -27,95 +27,95 @@ const CalendarDownloader = () => {
   };
 
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0]
-    setSelectedDate(today)
-  }, [])
+    const today = new Date().toISOString().split("T")[0];
+    setSelectedDate(today);
+  }, []);
 
   useEffect(() => {
     if (selectedDate) {
-      handleFetchNews()
+      handleFetchNews();
     }
-  }, [selectedDate])
+  }, [selectedDate]);
 
   const handleDownload = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!selectedDate) {
-      toast.error("Please select a valid date.")
-      return
+      toast.error("Please select a valid date.");
+      return;
     }
 
-    setIsDownloading(true)
-    const downloadUrl = `${BASE_URL}/generate-pdf-by-date?date=${selectedDate}`
+    setIsDownloading(true);
+    const downloadUrl =`${BASE_URL}/generate-pdf-by-date?date=${selectedDate}`;
 
     try {
-      const response = await fetch(downloadUrl)
+      const response = await fetch(downloadUrl);
 
       if (!response.ok) {
-        toast.error(`No report found for ${selectedDate}`)
-        return
+        toast.error(`No report found for ${selectedDate}`);
+        return;
       }
 
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(new Blob([blob]))
-      const link = document.createElement("a")
-      link.href = url
-      link.setAttribute("download", `daily_governance_report_${selectedDate}.pdf`)
-      document.body.appendChild(link)
-      link.click()
-      link.parentNode.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `daily_governance_report_${selectedDate}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Download error:", error)
-      toast.error("An error occurred while trying to download the report.")
+      console.error("Download error:", error);
+      toast.error("An error occurred while trying to download the report.");
     } finally {
-      setIsDownloading(false)
+      setIsDownloading(false);
     }
-  }
+  };
 
   const handleFetchNews = async () => {
     if (!selectedDate) {
-      alert("Please select a valid date.")
-      return
+      alert("Please select a valid date.");
+      return;
     }
 
-    const fetchUrl = `${BASE_URL}/published-articles-by-date?date=${selectedDate}`
+    const fetchUrl = `${BASE_URL}/published-articles-by-date?date=${selectedDate};`
 
     try {
-      const response = await fetch(fetchUrl)
-      const result = await response.json()
+      const response = await fetch(fetchUrl);
+      const result = await response.json();
 
       if (result.status === "success") {
-        setArticles(result.articles || [])
-        setCurrentPage(1) // Reset to first page on new fetch
-        toast.success(`✅ ${result.message || "News fetched successfully."}`)
+        setArticles(result.articles || []);
+        setCurrentPage(1);
+        toast.success(`✅ ${result.message || "News fetched successfully."}`);
       } else {
-        toast.error("❌ Failed to fetch news: " + result.message)
+        toast.error("❌ Failed to fetch news: " + result.message);
       }
     } catch (error) {
-      console.error("Fetch error:", error)
-      toast.error("❌ An error occurred while fetching news.")
+      console.error("Fetch error:", error);
+      toast.error("❌ An error occurred while fetching news.");
     }
-  }
+  };
 
   const formatDate = (dateString) => {
-    const options = { year: "numeric", month: "long", day: "numeric" }
-    return new Date(dateString).toLocaleDateString("en-US", options)
-  }
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString("en-US", options);
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem("token")
-    navigate("/")
-  }
+    localStorage.removeItem("token");
+    navigate("/");
+  };
 
   const handleBack = () => {
-    navigate(-1)
-  }
+    navigate(-1);
+  };
 
-  const totalPages = Math.ceil(articles.length / articlesPerPage)
+  const totalPages = Math.ceil(articles.length / articlesPerPage);
   const paginatedArticles = articles.slice(
     (currentPage - 1) * articlesPerPage,
     currentPage * articlesPerPage
-  )
+  );
 
   return (
     <div className="dashboard-container">
@@ -170,13 +170,25 @@ const CalendarDownloader = () => {
                   <p className="article-summary">{article.issue_reason?.replace(/^\./, "").trim()}</p>
                 </div>
                 <div className="article-footer">
-                  <a onClick={() => openModal(article.content || article.description)} className="source-link" style={{ marginLeft: '10px' }}>
-                    View Detailed Source
-                  </a>
-                  <a href={article.url} target="_blank" rel="noopener noreferrer" className="read-more-link">
-                    Read Full Article →
-                  </a>
+                  <div className="footer-links">
+                    <a
+                      onClick={() => openModal(article.content || article.description)}
+                      className="source-link"
+                    >
+                      View Detailed Source
+                    </a>
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="read-more-link"
+                    >
+                      Read Full Article →
+                    </a>
+                  </div>
                 </div>
+
+
               </div>
             ))}
           </div>
@@ -184,18 +196,11 @@ const CalendarDownloader = () => {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="pagination">
-              <button
-                className="pagination-btn"
-                onClick={() => setCurrentPage((p) => p - 1)}
-                disabled={currentPage === 1}
-              >
+              <button className="pagination-btn" onClick={() => setCurrentPage((p) => p - 1)} disabled={currentPage === 1}>
                 ⬅ Prev
               </button>
 
-              <button
-                className={`pagination-btn ${currentPage === 1 ? "active" : ""}`}
-                onClick={() => setCurrentPage(1)}
-              >
+              <button className={`pagination-btn ${currentPage === 1 ? "active" : ""}`} onClick={() => setCurrentPage(1)}>
                 1
               </button>
 
@@ -209,11 +214,7 @@ const CalendarDownloader = () => {
                   return Math.abs(page - currentPage) <= 1;
                 })
                 .map((page) => (
-                  <button
-                    key={page}
-                    className={`pagination-btn ${currentPage === page ? "active" : ""}`}
-                    onClick={() => setCurrentPage(page)}
-                  >
+                  <button key={page} className={`pagination-btn ${currentPage === page ? "active" : ""}`} onClick={() => setCurrentPage(page)}>
                     {page}
                   </button>
                 ))}
@@ -221,28 +222,18 @@ const CalendarDownloader = () => {
               {currentPage < totalPages - 2 && totalPages > 5 && <span className="dots">...</span>}
 
               {totalPages > 1 && (
-                <button
-                  className={`pagination-btn ${currentPage === totalPages ? "active" : ""}`}
-                  onClick={() => setCurrentPage(totalPages)}
-                >
+                <button className={`pagination-btn ${currentPage === totalPages ? "active" : ""}`} onClick={() => setCurrentPage(totalPages)}>
                   {totalPages}
                 </button>
               )}
 
-              <button
-                className="pagination-btn"
-                onClick={() => setCurrentPage((p) => p + 1)}
-                disabled={currentPage === totalPages}
-              >
+              <button className="pagination-btn" onClick={() => setCurrentPage((p) => p + 1)} disabled={currentPage === totalPages}>
                 Next ➡
               </button>
             </div>
           )}
         </div>
       )}
-
-      {/* Footer */}
-      <Footer />
 
       {/* Empty State */}
       {articles.length === 0 && selectedDate && (
@@ -259,8 +250,12 @@ const CalendarDownloader = () => {
           <p className="modal-content-text">{modalContent}</p>
         </Modal>
       )}
-    </div>
-  )
-}
 
-export default CalendarDownloader
+      {/* Footer */}  
+      <Footer />
+
+    </div>
+  );
+};
+
+export default CalendarDownloader;

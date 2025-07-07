@@ -71,6 +71,9 @@ project-root/
    python -m playwright install chromium
 
    ```
+   # This installs Telugu-to-English model
+argospm install translate-te_en
+
 
 6. **Run the Flask server:**
 

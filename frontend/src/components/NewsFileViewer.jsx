@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Modal from './Modal';
 import { useNavigate } from "react-router-dom";
@@ -101,7 +100,7 @@ function NewsFileViewer() {
     <div className="news-viewer-container">
       <div className="header-section">
         <div className="government-seal">
-          <div className="seal-icon">🏛️</div>
+          <div className="seal-icon">🏛</div>
         </div>
         <h1 className="main-title">Daily Governance Report</h1>
         <p className="subtitle">Official Government News & Updates</p>
@@ -132,25 +131,29 @@ function NewsFileViewer() {
 
       {error && (
         <div className="error-container">
-          <div className="error-icon">⚠️</div>
+          <div className="error-icon">⚠</div>
           <p className="error-text">{error}</p>
         </div>
       )}
 
-      <h4 style={{ padding: "10px", fontSize: "large" }}>Today's news</h4>
+      <h1 style={{ padding: "10px", fontSize: "40px" }}>Today's news</h1>
 
       <div className="news-grid">
         {currentArticles.map((article, index) => (
           <div key={index} className="news-card">
             <div className="card-header">
-              <h3 className="article-headline">{article.headline}</h3>
+              {console.log(article)}
+              <h3 className="article-headline">{article.headline_ai}</h3>
               <span className="article-date">{article.published_date}</span>
             </div>
             <div className="card-content">
               <h3>Issue</h3>
-              <p className="article-content">
-                {article.issue_reason?.replace(/^\./, "").trim()}
-              </p>
+              <p
+                className="article-content"
+                dangerouslySetInnerHTML={{
+                  __html: article.issue_reason?.replace(/^\./, "").trim(),
+                }}
+              ></p>
             </div>
             <div className="card-footer">
               <a
@@ -248,7 +251,7 @@ function NewsFileViewer() {
           </button>
         </div>
       )}
-<Footer />
+      <Footer />
 
       {showModal && (
         <Modal onClose={closeModal}>
@@ -256,7 +259,7 @@ function NewsFileViewer() {
         </Modal>
       )}
     </div>
-    
+
   );
 }
 

@@ -19,6 +19,7 @@ from io import BytesIO
 from flask_bcrypt import Bcrypt
 import jwt
 from dotenv import load_dotenv
+from difflib import SequenceMatcher
 
 import anthropic
 
@@ -29,7 +30,7 @@ if os.getenv("FLASK_ENV") != "production":
 # --- Client Initializations ---
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
-translator = GoogleTranslator(source='auto', target='en')
+# translator = GoogleTranslator(source='auto', target='en')
 
 # Securely load keys from environment variables
 API_KEY = os.getenv("NEWS_API_KEY")
@@ -71,59 +72,55 @@ def is_not_english(text):
     except:
         return False
 
-def safe_translate(text, retries=3):
-    for attempt in range(retries):
-        try:
-            return translator.translate(text)
-        except Exception as e:
-            print(f"[Translation Error - attempt {attempt+1}] {e}")
-            time.sleep(1)  # short delay before retry
-    return text  # fallback: return original text if all retries fail
+# def safe_translate(text, retries=3):
+#     for attempt in range(retries):
+#         try:
+#             return translator.translate(text)
+#         except Exception as e:
+#             print(f"[Translation Error - attempt {attempt+1}] {e}")
+#             time.sleep(1)  # short delay before retry
+#     return text  # fallback: return original text if all retries fail
 
 # --- AI & Logic Functions ---
-
-def build_issue_check_prompt(articles):
+def build_issue_check_prompt(article):
     prompt = """
 You are a governance and public policy AI expert.
 
-You will be given a list of news articles from Andhra Pradesh and nearby regions.
+You will be given a single news article from Andhra Pradesh or nearby regions.
 
-For each article, determine:
-- Is this article about a public issue, governance failure, crime, unrest, corruption, or a matter of public concern relevant to Andhra Pradesh?
+Your task:
+- Determine whether the article discusses a major negative issue such as:
+  - Public problems, governance failures, crime, unrest, corruption, disasters, or any serious public concern.
+- ⛘ Strictly exclude political news: party statements, election campaigns, leader speeches, or political promotion.
+- ✅ Only include stories impacting the general public negatively.
 
-Instructions:
-- For each article, respond strictly in this JSON format:
-  {
-    "headline": "<headline>",
-    "is_issue": "YES" or "NO",
-    "reason_html": "<only if YES — a short 3-line HTML reason with the specific location wrapped in <b>...</b>>"
-  }
-- The location mentioned in the reason must be wrapped in HTML bold tags like <b>Chittoor</b>.
-- The reason must be written in HTML, but short and human-readable.
-- Return a JSON array of all responses.
-- Do not skip any article.
-- Do not include anything outside the JSON.
+You must return the following fields:
+{
+  "headline_ai": "<5–6 word summary>",
+  "is_issue": "YES" or "NO",
+  "reason_html": "<if YES — short 3-line HTML explanation with <b>Location</b>>",
+  "description": "<English 2-paragraph summary>",
+  "content": "<English 2-paragraph summary>"
+}
 
-Articles:
+Translate only if the content is in Telugu. If already English, summarize directly.
+Ensure the output is ONLY the above JSON object.
 """
-    for i, article in enumerate(articles, 1):
-        title = article.get("title", "")
-        desc = article.get("description") or ""
-        content = article.get("content") or ""
-        keywords = article.get("keywords") or []
+    title = article.get("title", "")
+    desc = article.get("description") or ""
+    content = article.get("content") or ""
+    keywords = article.get("keywords") or []
 
-        prompt += f"""
-Article {i}:
-Headline: {title}
+    prompt += f"""
+Original Headline: {title}
 Description: {desc}
 Content: {content[:1000]}
 Keywords: {keywords}
 """
-
     return prompt.strip()
 
-def check_if_issue(articles):
-    prompt = build_issue_check_prompt(articles)
+def check_if_issue(article):
+    prompt = build_issue_check_prompt(article)
     print("Prompt length:", len(prompt))
     try:
         response = client.messages.create(
@@ -132,33 +129,28 @@ def check_if_issue(articles):
             temperature=0.3,
             messages=[{"role": "user", "content": prompt}]
         )
-        time.sleep(2)
+        time.sleep(3)
 
         if not response or not getattr(response, "content", None):
             print("❌ Claude returned empty content.")
-            return []
+            return None
 
         raw = response.content[0].text.strip()
-        extracted = raw[raw.index("[") : raw.index("]") + 1]
-        raw = json.loads(extracted)
-        try:
-            with open("claude_results_log.jsonl", "a", encoding="utf-8") as log_file:
-                log_file.write(str(raw) + "\n")
-            return raw
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        if not match:
+            print("❌ Claude response did not contain valid JSON object.")
+            return None
 
-        except Exception as json_error:
-            print("❌ Failed to parse JSON from Claude's response.")
-            print("Raw output:\n", raw)
-            print("Error:\n", json_error)
-            return []
+        parsed = json.loads(match.group(0))
+        with open("claude_results_log.jsonl", "a", encoding="utf-8") as log_file:
+            log_file.write(json.dumps(parsed) + "\n")
+        return parsed
 
     except Exception as e:
         print("❌ Claude API request failed:", e)
-        return []
-
+        return None
 
 def fetch_and_store_news_logic():
-    """Fetches top & medium priority Andhra Pradesh news, checks issues, stores in DB."""
     urls = [
         f"https://newsdata.io/api/1/news?apikey={API_KEY}&country=in&q=Andhra%20Pradesh&size=50&removeduplicate=1&prioritydomain=top",
         f"https://newsdata.io/api/1/news?apikey={API_KEY}&country=in&q=Andhra%20Pradesh&size=50&removeduplicate=1&prioritydomain=medium"
@@ -169,6 +161,9 @@ def fetch_and_store_news_logic():
 
     try:
         all_articles = []
+        existing_headlines = [
+            doc["headline"] for doc in collection.find({}, {"headline": 1}) if doc.get("headline")
+        ]
         for url in urls:
             resp = requests.get(url)
             resp.raise_for_status()
@@ -186,67 +181,47 @@ def fetch_and_store_news_logic():
                 if collection.find_one({"article_id": article_id}):
                     continue
 
+                if collection.find_one({"headline": art.get("title")}):
+                    continue
+
+                if collection.find_one({"url": art.get("link")}):
+                    continue
+
                 all_articles.append(art)
-        # Chunk into batches of 15
-        for i in range(0, len(all_articles), 15):
 
-            chunk = all_articles[i:i+15]
-            results = check_if_issue(chunk)
-            print("Claude response:", results)
-
-            if not isinstance(results, list) or len(results) != len(chunk):
-                print("❌ Claude returned invalid/mismatched response. Skipping this chunk.")
-                print("Chunk length:", len(chunk), "| Results length:", len(results))
-                print("Results:", results)
+        for article in all_articles:
+            result = check_if_issue(article)
+            if not result or not isinstance(result, dict):
                 continue
 
-            if not isinstance(results, list):
-                print("❌ Unexpected result from Claude:", results)
+            if result.get("is_issue") != "YES":
+                # time.sleep(3)
                 continue
 
-            for article, result in zip(chunk, results):
-                if not result or not isinstance(result, dict):
-                    print("⚠️ Skipping invalid result:", result)
-                    continue
-
-                if result.get("is_issue") != "YES":
-                    time.sleep(2)
-                    continue
-
-                # Translate if needed
-                headline_raw = article.get("title", "No title") or ""
-                description_raw = article.get("description", "") or ""
-                content_raw = article.get("content", "") or ""
-
-                if is_not_english(headline_raw):
-                    headline_raw = safe_translate(headline_raw)
-                if is_not_english(description_raw):
-                    description_raw = safe_translate(description_raw)
-                if is_not_english(content_raw):
-                    content_raw = safe_translate(content_raw)
-
-                collection.insert_one({
-                    "article_id": article.get("article_id"),
-                    "headline": clean_text(headline_raw),
-                    "source": clean_text(article.get("source_id", "Unknown")),
-                    "url": clean_text(article.get("link", "No URL")),
-                    "published_date": clean_text(article.get("pubDate", "Unknown")),
-                    "description": clean_text(description_raw),
-                    "content": clean_text(content_raw),
-                    "source_priority": article.get("source_priority"),
-                    "tags": article.get("category", []),
-                    "keywords": article.get("keywords", []),
-                    "issue_reason": result.get("reason_html", ""),
-                    "stored_at": datetime.now(timezone.utc)
-                })
-
-                stored_count += 1
+            collection.insert_one({
+                "article_id": article.get("article_id"),
+                "headline": clean_text(article.get("title", "No headline")),
+                "headline_ai": clean_text(result.get("headline_ai", "No headline")),
+                "source": clean_text(article.get("source_id", "Unknown")),
+                "url": clean_text(article.get("link", "No URL")),
+                "published_date": clean_text(article.get("pubDate", "Unknown")),
+                "description": clean_text(result.get("description", "")),
+                "content": clean_text(result.get("content", "")),
+                "source_priority": article.get("source_priority"),
+                "tags": article.get("category", []),
+                "keywords": article.get("keywords", []),
+                "issue_reason": result.get("reason_html", ""),
+                "stored_at": datetime.now(timezone.utc)
+            })
+            stored_count += 1
+            time.sleep(3)
 
         return {"status": "success", "articles_fetched": stored_count}
 
     except Exception as e:
         print(e)
         return {"status": "error", "message": str(e)}
+
 
 def get_articles_logic(time_format="%Y-%m-%d %H:%M:%S", date_str=None):
     """Fetches articles from the DB, either from the last 24h or for a specific date."""
@@ -264,9 +239,11 @@ def get_articles_logic(time_format="%Y-%m-%d %H:%M:%S", date_str=None):
     query = {"published_date": {"$gte": lower_bound, "$lte": upper_bound}}
     articles = list(collection.find(query).sort("published_date", -1))
     
+    
     return [
         {
             "headline": a.get("headline"),
+            "headline_ai": a.get("headline_ai"),
             "description": a.get("description"),
             "content": a.get("content"),
             "published_date": a.get("published_date"),
@@ -288,23 +265,32 @@ def summarize_news_logic(articles):
 
     prompt = f"""
 You are a high-precision regional news summarization AI focused on Andhra Pradesh.
-Below is a list of headlines and their issue reasons:
+
+Below is a list of news issues, each with a short explanation:
 \"\"\"{combined_content}\"\"\"
+
 Your task:
-1. Extract only **major public issues** strictly related to Andhra Pradesh.
-2. Group them into **exactly 8 mandatory categories**:
-   - Governance, Law & Order, Healthcare, Infrastructure, Education, Environment, Corruption & Politics, Agriculture
-3. For each category:
-   - Provide **at least 4 real issues**.
-   - Each issue should be **1–2 sentences** and include **exact location** (district/city/town).
-Output JSON format (strict):
+1. Go through all issues and group them logically into meaningful categories based on their content (e.g., Floods, Crime, Accidents, Education, Healthcare, Infrastructure, Corruption etc.).
+2. There is **no limit or fixed number of categories**. You must dynamically decide what categories make sense.
+3. Each category must contain **all matching issues**.
+4. Each issue should remain in **its original sentence form**, with **exact location** (district/city/town) included.
+
+Output strictly in this JSON format:
 {{
   "categories": [
-    {{ "category_name": "Agriculture", "issues": ["Example issue in XYZ District..."] }},
+    {{
+      "category_name": "Generated Category",
+      "issues": [
+        "Issue summary 1 with location...",
+        "Issue summary 2 with location...",
+        ...
+      ]
+    }},
     ...
   ]
 }}
-Only return the JSON. No extra formatting or explanation.
+
+Only return the JSON. No explanations, comments or markdown.
 """
     try:
         response = client.messages.create(
@@ -314,6 +300,7 @@ Only return the JSON. No extra formatting or explanation.
         messages=[{"role": "user", "content": prompt}]
     )
         text = response.content[0].text.strip()
+        print(text)
         json_text = re.search(r"\{.*\}", text, re.DOTALL)
         if not json_text:
             return {"status": "error", "message": "Model did not return valid JSON"}

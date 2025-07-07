@@ -2,28 +2,18 @@ import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
 import "./Authentcation.css"
+import logo from "../assets/rtgs-logo.jpg.png";
+
+  // ✅ Import the logo
 
 const Authentication = () => {
   const BASE_URL = import.meta.env.VITE_BASE_URL
-    const navigate = useNavigate();
-  // const [signupData, setSignupData] = useState({
-  //   fullName: "",
-  //   email: "",
-  //   password: "",
-  //   confirmPassword: "",
-  // })
+  const navigate = useNavigate();
 
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
   })
-
-  // const handleSignupChange = (e) => {
-  //   setSignupData({
-  //     ...signupData,
-  //     [e.target.name]: e.target.value,
-  //   })
-  // }
 
   const handleLoginChange = (e) => {
     setLoginData({
@@ -32,37 +22,9 @@ const Authentication = () => {
     })
   }
 
-  // const handleSignupSubmit = async (e) => {
-  //   e.preventDefault()
-  
-  //   if (signupData.password !== signupData.confirmPassword) {
-  //     toast.error("Passwords do not match")
-  //     return
-  //   }
-  
-  //   try {
-  //     const res = await fetch(`${BASE_URL}/signup`, {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify(signupData),
-  //     })
-  //     const data = await res.json()
-  
-  //     if (data.status === "success") {
-  //       localStorage.setItem("token", data.token)
-  //       toast.success("Signup successful!")
-  //       navigate("/dashboard")
-  //     } else {
-  //       toast.error(data.message || "Signup failed")
-  //     }
-  //   } catch (err) {
-  //       toast.error(`Server error ${err}`)
-  //   }
-  // }
-
   const handleLoginSubmit = async (e) => {
     e.preventDefault()
-  
+
     try {
       const res = await fetch(`${BASE_URL}/login`, {
         method: "POST",
@@ -70,9 +32,8 @@ const Authentication = () => {
         body: JSON.stringify(loginData),
       })
       const data = await res.json()
-  
+
       if (data.status === "success") {
-        localStorage.setItem("token", data.token)
         localStorage.setItem("token", data.token)
         toast.success("Login successful!")
         navigate("/dashboard")
@@ -80,7 +41,7 @@ const Authentication = () => {
         toast.error(data.message || "Login failed")
       }
     } catch (err) {
-        toast.error(`Server error ${err}`)
+      toast.error(`Server error ${err}`)
     }
   }
 
@@ -90,17 +51,13 @@ const Authentication = () => {
         {/* Sign Up Section - Left Side */}
         <div className="auth-section signup-section">
           <div className="auth-form">
-            
-            
+            {/* ✅ Add logo here */}
+            <img src={logo} alt="Real Time Governance Logo" className="auth-logo" />
+            <p style={{ textAlign: "center", fontWeight: "bold", marginTop: "10px" }}>
+              Powered by Real Time Governance <br></br>
+            </p>
           </div>
-        </div> 
-
-        {/* Vertical Separator */}
-        {/* <div className="separator">
-          <div className="separator-line"></div>
-          <span className="separator-text">or</span>
-          <div className="separator-line"></div>
-        </div> */}
+        </div>
 
         {/* Login Section - Right Side */}
         <div className="auth-section login-section">
