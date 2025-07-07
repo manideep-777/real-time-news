@@ -4,9 +4,9 @@
   }
   
   .news-viewer-container {
-    max-width: 1200px;
+    max-width: fit-content;
     margin: 0 auto;
-    padding: 20px;
+    /* padding: 20px; */
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     min-height: 100vh;
@@ -159,6 +159,15 @@
   .btn-icon {
     font-size: 18px;
   }
+
+  .btn-loader {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
   
   /* Loading State */
   .loading-container {
@@ -223,7 +232,8 @@
   .news-grid {
     display: grid;
     gap: 25px;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); /* Adjusted for 3 columns */
+    padding: 10px;
   }
   
   /* News Cards */
@@ -242,8 +252,8 @@
   }
   
   .card-header {
-    padding: 25px 25px 15px;
-    border-bottom: 2px solid #f5f5f5;
+    padding: 10px 25px;
+    /* border-bottom: 2px solid #f5f5f5;  */
   }
   
   .article-headline {
@@ -305,7 +315,7 @@
   }
   
   .card-content {
-    padding: 20px 25px;
+    padding: 0px 25px;
   }
   
   .article-content {
@@ -317,6 +327,9 @@
   }
   
   .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 15px 25px 25px;
     border-top: 1px solid #f5f5f5;
   }
@@ -336,6 +349,13 @@
     color: #0d47a1;
     text-decoration: underline;
   }
+
+.modal-content-text {
+  white-space: pre-wrap;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #444;
+}
   
   /* Empty State */
   .empty-state {
@@ -420,4 +440,37 @@
       font-size: 1.2rem;
     }
   }
-  
+
+/* Pagination Styles */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 30px;
+  gap: 10px;
+}
+
+.pagination-btn {
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.pagination-btn:hover {
+  background-color: #1976d2;
+}
+
+.pagination-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.pagination-btn.active {
+  background-color: #0d47a1;
+  font-weight: bold;
+}

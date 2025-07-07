@@ -20,7 +20,7 @@ from flask_bcrypt import Bcrypt
 import jwt
 from dotenv import load_dotenv
 
-import anthropic
+from together import Together
 
 # Load environment variables
 if os.getenv("FLASK_ENV") != "production":
@@ -34,13 +34,13 @@ translator = GoogleTranslator(source='auto', target='en')
 # Securely load keys from environment variables
 API_KEY = os.getenv("NEWS_API_KEY")
 SECRET_KEY = os.getenv("SECRET_KEY")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+TOGETHER_API_KEY = os.getenv("TOGETHER_API_KEY")
 
 # Check for missing environment variables
-if not all([API_KEY, SECRET_KEY, ANTHROPIC_API_KEY]):
+if not all([API_KEY, SECRET_KEY, TOGETHER_API_KEY]):
     raise ValueError("One or more critical environment variables (NEWS_API_KEY, SECRET_KEY, TOGETHER_API_KEY) are missing.")
 
-client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+client_together = Together(api_key=TOGETHER_API_KEY)
 
 # --- Constants ---
 MAX_CONTENT_LENGTH = 1000
@@ -49,8 +49,8 @@ MAX_CONTENT_LENGTH = 1000
 bcrypt = Bcrypt(app)
 
 # --- Database Connection ---
-client2 = MongoClient(os.getenv("MONGO_URI"))
-db = client2["news_db"]
+client = MongoClient(os.getenv("MONGO_URI"))
+db = client["news_db"]
 collection = db["andhra_pradesh_news"]
 users_collection = db["users"]
 
@@ -71,181 +71,136 @@ def is_not_english(text):
     except:
         return False
 
-def safe_translate(text, retries=3):
-    for attempt in range(retries):
-        try:
-            return translator.translate(text)
-        except Exception as e:
-            print(f"[Translation Error - attempt {attempt+1}] {e}")
-            time.sleep(1)  # short delay before retry
-    return text  # fallback: return original text if all retries fail
+def safe_translate(text):
+    try:
+        return translator.translate(text)
+    except Exception as e:
+        print(f"[Translation Error] {e}")
+        return text
 
 # --- AI & Logic Functions ---
 
-def build_issue_check_prompt(articles):
-    prompt = """
+def build_issue_check_prompt(article):
+    content = article.get('content') or ""
+    content_truncated = content[:1000]
+    return f"""
 You are a governance and public policy AI expert.
 
-You will be given a list of news articles from Andhra Pradesh and nearby regions.
+Given the following news article details from Andhra Pradesh:
 
-For each article, determine:
-- Is this article about a public issue, governance failure, crime, unrest, corruption, or a matter of public concern relevant to Andhra Pradesh?
+Title: {article.get('title')}
+Description: {article.get('description')}
+Content: {content_truncated}
+Keywords: {article.get('keywords', [])}
+Categories: {article.get('category', [])}
 
-Instructions:
-- For each article, respond strictly in this JSON format:
-  {
-    "headline": "<headline>",
-    "is_issue": "YES" or "NO",
-    "reason_html": "<only if YES — a short 3-line HTML reason with the specific location wrapped in <b>...</b>>"
-  }
-- The location mentioned in the reason must be wrapped in HTML bold tags like <b>Chittoor</b>.
-- The reason must be written in HTML, but short and human-readable.
-- Return a JSON array of all responses.
-- Do not skip any article.
-- Do not include anything outside the JSON.
-
-Articles:
-"""
-    for i, article in enumerate(articles, 1):
-        title = article.get("title", "")
-        desc = article.get("description") or ""
-        content = article.get("content") or ""
-        keywords = article.get("keywords") or []
-
-        prompt += f"""
-Article {i}:
-Headline: {title}
-Description: {desc}
-Content: {content[:1000]}
-Keywords: {keywords}
+Question:
+Is this article describing a major public issue, governance problem, social unrest, corruption, crime, or other problem of public interest in Andhra Pradesh? Answer only YES or NO with a short reason if YES.
 """
 
-    return prompt.strip()
-
-def check_if_issue(articles):
-    prompt = build_issue_check_prompt(articles)
-    print("Prompt length:", len(prompt))
+def check_if_issue(article):
+    prompt = build_issue_check_prompt(article)
     try:
-        response = client.messages.create(
-            model="claude-3-5-sonnet-20240620",
-            max_tokens=4096,
-            temperature=0.3,
-            messages=[{"role": "user", "content": prompt}]
+        response = client_together.chat.completions.create(
+            model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=256,
+            temperature=0.2
         )
         time.sleep(2)
+        answer = response.choices[0].message.content.strip()
 
-        if not response or not getattr(response, "content", None):
-            print("❌ Claude returned empty content.")
-            return []
-
-        raw = response.content[0].text.strip()
-        extracted = raw[raw.index("[") : raw.index("]") + 1]
-        raw = json.loads(extracted)
-        try:
-            with open("claude_results_log.jsonl", "a", encoding="utf-8") as log_file:
-                log_file.write(str(raw) + "\n")
-            return raw
-
-        except Exception as json_error:
-            print("❌ Failed to parse JSON from Claude's response.")
-            print("Raw output:\n", raw)
-            print("Error:\n", json_error)
-            return []
-
+        if answer.upper().startswith("YES"):
+            reason = answer[3:].strip()
+            return True, reason or "No reason provided"
+        return False, ""
     except Exception as e:
-        print("❌ Claude API request failed:", e)
-        return []
+        print("Issue check failed:", str(e))
+        return False, ""
 
+@app.route("/top")
+def top():
+    priority = []
 
-def fetch_and_store_news_logic():
-    """Fetches top & medium priority Andhra Pradesh news, checks issues, stores in DB."""
-    urls = [
-        f"https://newsdata.io/api/1/news?apikey={API_KEY}&country=in&q=Andhra%20Pradesh&size=50&removeduplicate=1&prioritydomain=top",
-        f"https://newsdata.io/api/1/news?apikey={API_KEY}&country=in&q=Andhra%20Pradesh&size=50&removeduplicate=1&prioritydomain=medium"
-    ]
+    # Fetch top 10% domains
+    url_top = f"https://newsdata.io/api/1/news?apikey={API_KEY}&country=in&q=Andhra%20Pradesh&size=50&removeduplicate=1&prioritydomain=top"
+    resp_top = requests.get(url_top)
+    resp_top.raise_for_status()
+    articles_top = resp_top.json().get("results", [])
 
-    stored_count = 0
+    # Fetch top 30% (medium, includes top again — we'll deduplicate)
+    url_medium = f"https://newsdata.io/api/1/news?apikey={API_KEY}&country=in&q=Andhra%20Pradesh&size=50&removeduplicate=1&prioritydomain=medium"
+    resp_medium = requests.get(url_medium)
+    resp_medium.raise_for_status()
+    articles_medium = resp_medium.json().get("results", [])
+
+    # Combine and deduplicate based on article_id
     seen_ids = set()
+    combined = articles_top + articles_medium
+    for art in combined:
+        if (aid := art.get("article_id")) and aid not in seen_ids:
+            seen_ids.add(aid)
+            source_priority = art.get("source_priority")
+            priority.append(source_priority)
 
+    return priority
+    
+def fetch_and_store_news_logic():
+    """Contains the logic to fetch, process, and store news articles."""
+    url = f"https://newsdata.io/api/1/news?apikey={API_KEY}&country=in&q=Andhra%20Pradesh&size=50&removeduplicate=1"
+    stored_count = 0
+    
     try:
-        all_articles = []
-        for url in urls:
-            resp = requests.get(url)
-            resp.raise_for_status()
-            articles = resp.json().get("results", [])
-            for art in articles:
-                article_id = art.get("article_id")
-                if not article_id or article_id in seen_ids:
-                    continue
-                seen_ids.add(article_id)
+        resp = requests.get(url)
+        resp.raise_for_status()
+        data = resp.json()
+        articles = data.get("results", [])
+        
 
-                source_priority = art.get("source_priority")
-                if source_priority is None or source_priority > 30000:
-                    continue
-
-                if collection.find_one({"article_id": article_id}):
-                    continue
-
-                all_articles.append(art)
-        # Chunk into batches of 15
-        for i in range(0, len(all_articles), 15):
-
-            chunk = all_articles[i:i+15]
-            results = check_if_issue(chunk)
-            print("Claude response:", results)
-
-            if not isinstance(results, list) or len(results) != len(chunk):
-                print("❌ Claude returned invalid/mismatched response. Skipping this chunk.")
-                print("Chunk length:", len(chunk), "| Results length:", len(results))
-                print("Results:", results)
+        for art in articles:
+            source_priority = art.get("source_priority")
+            if source_priority is None or source_priority > 30000:
                 continue
 
-            if not isinstance(results, list):
-                print("❌ Unexpected result from Claude:", results)
+            article_id = art.get("article_id")
+            if article_id and collection.find_one({"article_id": article_id}):
                 continue
 
-            for article, result in zip(chunk, results):
-                if not result or not isinstance(result, dict):
-                    print("⚠️ Skipping invalid result:", result)
-                    continue
+            is_issue, reason = check_if_issue(art)
+            if not is_issue:
+                time.sleep(15)
+                continue
 
-                if result.get("is_issue") != "YES":
-                    time.sleep(2)
-                    continue
+            content_raw = art.get("content") or ""
+            description_raw = art.get("description") or ""
+            headline_raw = art.get("title", "No title")
 
-                # Translate if needed
-                headline_raw = article.get("title", "No title") or ""
-                description_raw = article.get("description", "") or ""
-                content_raw = article.get("content", "") or ""
+            if is_not_english(headline_raw):
+                headline_raw = safe_translate(headline_raw)
+            if is_not_english(description_raw):
+                description_raw = safe_translate(description_raw)
+            if is_not_english(content_raw):
+                content_raw = safe_translate(content_raw)
 
-                if is_not_english(headline_raw):
-                    headline_raw = safe_translate(headline_raw)
-                if is_not_english(description_raw):
-                    description_raw = safe_translate(description_raw)
-                if is_not_english(content_raw):
-                    content_raw = safe_translate(content_raw)
-
-                collection.insert_one({
-                    "article_id": article.get("article_id"),
-                    "headline": clean_text(headline_raw),
-                    "source": clean_text(article.get("source_id", "Unknown")),
-                    "url": clean_text(article.get("link", "No URL")),
-                    "published_date": clean_text(article.get("pubDate", "Unknown")),
-                    "description": clean_text(description_raw),
-                    "content": clean_text(content_raw),
-                    "source_priority": article.get("source_priority"),
-                    "tags": article.get("category", []),
-                    "keywords": article.get("keywords", []),
-                    "issue_reason": result.get("reason_html", ""),
-                    "stored_at": datetime.now(timezone.utc)
-                })
-
-                stored_count += 1
-
+            collection.insert_one({
+                "article_id": article_id,
+                "headline": clean_text(headline_raw),
+                "source": clean_text(art.get("source_id", "Unknown")),
+                "url": clean_text(art.get("link", "No URL")),
+                "published_date": clean_text(art.get("pubDate", "Unknown")),
+                "description": clean_text(description_raw),
+                "content": clean_text(content_raw),
+                "source_priority": source_priority,
+                "tags": art.get("category", []),
+                "keywords": art.get("keywords", []),
+                "issue_reason": reason,
+                "stored_at": datetime.now(timezone.utc)
+            })
+            stored_count += 1
+        
         return {"status": "success", "articles_fetched": stored_count}
 
     except Exception as e:
-        print(e)
         return {"status": "error", "message": str(e)}
 
 def get_articles_logic(time_format="%Y-%m-%d %H:%M:%S", date_str=None):
@@ -307,13 +262,16 @@ Output JSON format (strict):
 Only return the JSON. No extra formatting or explanation.
 """
     try:
-        response = client.messages.create(
-        model="claude-3-5-sonnet-20240620",
-        max_tokens=4096,
-        temperature=0,
-        messages=[{"role": "user", "content": prompt}]
-    )
-        text = response.content[0].text.strip()
+        response = client_together.chat.completions.create(
+            model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+            messages=[
+                {"role": "system", "content": "You are a factual news summarizer."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=2048,
+            temperature=0.3,
+        )
+        text = response.choices[0].message.content
         json_text = re.search(r"\{.*\}", text, re.DOTALL)
         if not json_text:
             return {"status": "error", "message": "Model did not return valid JSON"}
@@ -382,7 +340,6 @@ def is_authenticated():
 @app.route("/fetch-news")
 def fetch_news_endpoint():
     result = fetch_and_store_news_logic()
-    print(result)
     status_code = 500 if result["status"] == "error" else 200
     return jsonify(result), status_code
 
@@ -426,6 +383,39 @@ def summarize_news_by_date_endpoint():
     result = summarize_news_logic(articles)
     status_code = 500 if result["status"] == "error" else 200
     return jsonify(result), status_code
+
+@app.route("/api/articles")
+def api_articles():
+    """Retrieves all articles from the database and saves them to a JSON file."""
+    try:
+        articles_cursor = collection.find().sort("stored_at", -1)
+        articles_list = []
+        for article in articles_cursor:
+            article["_id"] = str(article["_id"])
+            article.pop("issue_reason", None)  # Remove 'issue_reason' field if present
+            
+            if "published_date" in article and isinstance(article["published_date"], datetime):
+                article["published_date"] = article["published_date"].isoformat()
+            if "stored_at" in article and isinstance(article["stored_at"], datetime):
+                article["stored_at"] = article["stored_at"].isoformat()
+            
+            articles_list.append(article)
+
+        # Define the path for the new JSON file
+        reports_dir = Path(__file__).parent / "reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_name = f"all_articles_{timestamp}.json"
+        file_path = reports_dir / file_name
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump({"count": len(articles_list), "articles": articles_list}, f, ensure_ascii=False, indent=4)
+
+        return jsonify({"status": "success", "message": f"All articles saved to {file_path}"}), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route("/generate-pdf")

@@ -6,24 +6,24 @@ import "./Authentcation.css"
 const Authentication = () => {
   const BASE_URL = import.meta.env.VITE_BASE_URL
     const navigate = useNavigate();
-  const [signupData, setSignupData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  })
+  // const [signupData, setSignupData] = useState({
+  //   fullName: "",
+  //   email: "",
+  //   password: "",
+  //   confirmPassword: "",
+  // })
 
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
   })
 
-  const handleSignupChange = (e) => {
-    setSignupData({
-      ...signupData,
-      [e.target.name]: e.target.value,
-    })
-  }
+  // const handleSignupChange = (e) => {
+  //   setSignupData({
+  //     ...signupData,
+  //     [e.target.name]: e.target.value,
+  //   })
+  // }
 
   const handleLoginChange = (e) => {
     setLoginData({
@@ -32,33 +32,33 @@ const Authentication = () => {
     })
   }
 
-  const handleSignupSubmit = async (e) => {
-    e.preventDefault()
+  // const handleSignupSubmit = async (e) => {
+  //   e.preventDefault()
   
-    if (signupData.password !== signupData.confirmPassword) {
-      toast.error("Passwords do not match")
-      return
-    }
+  //   if (signupData.password !== signupData.confirmPassword) {
+  //     toast.error("Passwords do not match")
+  //     return
+  //   }
   
-    try {
-      const res = await fetch(`${BASE_URL}/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(signupData),
-      })
-      const data = await res.json()
+  //   try {
+  //     const res = await fetch(`${BASE_URL}/signup`, {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify(signupData),
+  //     })
+  //     const data = await res.json()
   
-      if (data.status === "success") {
-        localStorage.setItem("token", data.token)
-        toast.success("Signup successful!")
-        navigate("/dashboard")
-      } else {
-        toast.error(data.message || "Signup failed")
-      }
-    } catch (err) {
-        toast.error(`Server error ${err}`)
-    }
-  }
+  //     if (data.status === "success") {
+  //       localStorage.setItem("token", data.token)
+  //       toast.success("Signup successful!")
+  //       navigate("/dashboard")
+  //     } else {
+  //       toast.error(data.message || "Signup failed")
+  //     }
+  //   } catch (err) {
+  //       toast.error(`Server error ${err}`)
+  //   }
+  // }
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault()
@@ -90,88 +90,17 @@ const Authentication = () => {
         {/* Sign Up Section - Left Side */}
         <div className="auth-section signup-section">
           <div className="auth-form">
-            <h2 className="auth-title">Create Account</h2>
-
-            <form onSubmit={handleSignupSubmit} className="form">
-              <div className="input-group">
-                <label htmlFor="signup-fullName" className="label">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  id="signup-fullName"
-                  name="fullName"
-                  value={signupData.fullName}
-                  onChange={handleSignupChange}
-                  className="input"
-                  placeholder="Enter your full name"
-                  required
-                />
-              </div>
-
-              <div className="input-group">
-                <label htmlFor="signup-email" className="label">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  id="signup-email"
-                  name="email"
-                  value={signupData.email}
-                  onChange={handleSignupChange}
-                  className="input"
-                  placeholder="Enter your email"
-                  required
-                />
-              </div>
-
-              <div className="input-group">
-                <label htmlFor="signup-password" className="label">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  id="signup-password"
-                  name="password"
-                  value={signupData.password}
-                  onChange={handleSignupChange}
-                  className="input"
-                  placeholder="Create a password"
-                  required
-                />
-              </div>
-
-              <div className="input-group">
-                <label htmlFor="signup-confirmPassword" className="label">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  id="signup-confirmPassword"
-                  name="confirmPassword"
-                  value={signupData.confirmPassword}
-                  onChange={handleSignupChange}
-                  className="input"
-                  placeholder="Confirm your password"
-                  required
-                />
-              </div>
-
-              <button type="submit" className="btn btn-primary">
-                Sign Up
-              </button>
-            </form>
-
+            
             
           </div>
-        </div>
+        </div> 
 
         {/* Vertical Separator */}
-        <div className="separator">
+        {/* <div className="separator">
           <div className="separator-line"></div>
           <span className="separator-text">or</span>
           <div className="separator-line"></div>
-        </div>
+        </div> */}
 
         {/* Login Section - Right Side */}
         <div className="auth-section login-section">

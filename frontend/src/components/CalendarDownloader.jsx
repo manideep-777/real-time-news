@@ -1,20 +1,41 @@
-
 import { useState, useEffect } from "react"
 import "./CalendarDownloader.css"
 import { toast } from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
+import Modal from './Modal';
+import Footer from "./Footer";
 
 const CalendarDownloader = () => {
   const navigate = useNavigate();
   const BASE_URL = import.meta.env.VITE_BASE_URL
   const [selectedDate, setSelectedDate] = useState("")
   const [articles, setArticles] = useState([])
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [showModal, setShowModal] = useState(false);
+  const [modalContent, setModalContent] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const articlesPerPage = 9;
 
-  // Set default to today's date
+  const openModal = (content) => {
+    setModalContent(content);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setModalContent("");
+  };
+
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0]
     setSelectedDate(today)
   }, [])
+
+  useEffect(() => {
+    if (selectedDate) {
+      handleFetchNews()
+    }
+  }, [selectedDate])
 
   const handleDownload = async (e) => {
     e.preventDefault()
@@ -23,20 +44,31 @@ const CalendarDownloader = () => {
       return
     }
 
+    setIsDownloading(true)
     const downloadUrl = `${BASE_URL}/generate-pdf-by-date?date=${selectedDate}`
 
     try {
-      const response = await fetch(downloadUrl, { method: "HEAD" })
+      const response = await fetch(downloadUrl)
 
       if (!response.ok) {
         toast.error(`No report found for ${selectedDate}`)
         return
       }
 
-      window.location.href = downloadUrl
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(new Blob([blob]))
+      const link = document.createElement("a")
+      link.href = url
+      link.setAttribute("download", `daily_governance_report_${selectedDate}.pdf`)
+      document.body.appendChild(link)
+      link.click()
+      link.parentNode.removeChild(link)
+      window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error("Download error:", error)
       toast.error("An error occurred while trying to download the report.")
+    } finally {
+      setIsDownloading(false)
     }
   }
 
@@ -54,6 +86,7 @@ const CalendarDownloader = () => {
 
       if (result.status === "success") {
         setArticles(result.articles || [])
+        setCurrentPage(1) // Reset to first page on new fetch
         toast.success(`✅ ${result.message || "News fetched successfully."}`)
       } else {
         toast.error("❌ Failed to fetch news: " + result.message)
@@ -74,32 +107,30 @@ const CalendarDownloader = () => {
     navigate("/")
   }
 
+  const handleBack = () => {
+    navigate(-1)
+  }
+
+  const totalPages = Math.ceil(articles.length / articlesPerPage)
+  const paginatedArticles = articles.slice(
+    (currentPage - 1) * articlesPerPage,
+    currentPage * articlesPerPage
+  )
+
   return (
     <div className="dashboard-container">
-      {/* Header Section */}
+      {/* Header */}
       <div className="header-section">
-        <div className="government-icon">
-          {/* <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 3L2 9V11H22V9L12 3Z" fill="currentColor" opacity="0.7" />
-            <path d="M4 11V19H6V11H4Z" fill="currentColor" />
-            <path d="M8 11V19H10V11H8Z" fill="currentColor" />
-            <path d="M12 11V19H14V11H12Z" fill="currentColor" />
-            <path d="M16 11V19H18V11H16Z" fill="currentColor" />
-            <path d="M20 11V19H22V11H20Z" fill="currentColor" />
-            <path d="M2 19H22V21H2V19Z" fill="currentColor" />
-          </svg> */}
-          <div className="seal-icon">🏛️</div>
-        </div>
+        <button onClick={handleBack} className="btn btn-back">&#x2B05; Back</button>
+        <div className="government-icon"><div className="seal-icon">🏛</div></div>
         <h1 className="main-title">Daily Governance Report</h1>
         <p className="subtitle">Official Government News & Updates</p>
       </div>
 
-      {/* Date Selection and Action Buttons */}
+      {/* Actions */}
       <div className="action-section">
         <div className="date-selector">
-          <label htmlFor="date-input" className="date-label">
-            Select Date:
-          </label>
+          <label htmlFor="date-input" className="date-label">Select Date:</label>
           <input
             id="date-input"
             type="date"
@@ -111,24 +142,16 @@ const CalendarDownloader = () => {
         </div>
 
         <div className="button-group">
-          <button type="button" onClick={handleFetchNews} className="btn btn-fetch">
-            <span className="btn-icon">📰</span>
-            Fetch News
+          <button type="button" onClick={handleDownload} className="btn btn-download" disabled={isDownloading}>
+            {isDownloading ? <div className="btn-loader"></div> : <span className="btn-icon">📄</span>}
+            {isDownloading ? "Downloading..." : "Download PDF Report"}
           </button>
-
-          <button type="button" onClick={handleDownload} className="btn btn-download">
-            <span className="btn-icon">📄</span>
-            Download PDF Report
-          </button>
-
-          <button onClick={handleLogout} className="btn btn-third">
-            Log out
-          </button>
+          <button onClick={handleLogout} className="btn btn-third">Log out</button>
         </div>
       </div>
 
-      {/* News Articles Section */}
-      {articles.length > 0 && (
+      {/* Articles */}
+      {paginatedArticles.length > 0 && (
         <div className="news-section">
           <div className="news-header">
             <h2 className="news-title">📰 News Articles for {formatDate(selectedDate)}</h2>
@@ -136,25 +159,20 @@ const CalendarDownloader = () => {
           </div>
 
           <div className="articles-grid">
-            {articles.map((article, index) => (
+            {paginatedArticles.map((article, index) => (
               <div key={index} className="article-card">
                 <div className="article-header">
                   <h3 className="article-headline">{article.headline}</h3>
                   <span className="article-date">{article.published_date}</span>
                 </div>
-
-                <div className="article-content">
-                  <p className="article-summary">
-                    {article.content || article.description || "Click to read the full article for more details."}
-                  </p>
-                </div>
-
                 <div className="article-content">
                   <h3>Issue</h3>
-                  <p className="article-summary">{article.issue_reason}</p>
+                  <p className="article-summary">{article.issue_reason?.replace(/^\./, "").trim()}</p>
                 </div>
-
                 <div className="article-footer">
+                  <a onClick={() => openModal(article.content || article.description)} className="source-link" style={{ marginLeft: '10px' }}>
+                    View Detailed Source
+                  </a>
                   <a href={article.url} target="_blank" rel="noopener noreferrer" className="read-more-link">
                     Read Full Article →
                   </a>
@@ -162,16 +180,84 @@ const CalendarDownloader = () => {
               </div>
             ))}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage((p) => p - 1)}
+                disabled={currentPage === 1}
+              >
+                ⬅ Prev
+              </button>
+
+              <button
+                className={`pagination-btn ${currentPage === 1 ? "active" : ""}`}
+                onClick={() => setCurrentPage(1)}
+              >
+                1
+              </button>
+
+              {currentPage > 3 && totalPages > 5 && <span className="dots">...</span>}
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => {
+                  if (page === 1 || page === totalPages) return false;
+                  if (currentPage <= 3) return page <= 4;
+                  if (currentPage >= totalPages - 2) return page >= totalPages - 3;
+                  return Math.abs(page - currentPage) <= 1;
+                })
+                .map((page) => (
+                  <button
+                    key={page}
+                    className={`pagination-btn ${currentPage === page ? "active" : ""}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+              {currentPage < totalPages - 2 && totalPages > 5 && <span className="dots">...</span>}
+
+              {totalPages > 1 && (
+                <button
+                  className={`pagination-btn ${currentPage === totalPages ? "active" : ""}`}
+                  onClick={() => setCurrentPage(totalPages)}
+                >
+                  {totalPages}
+                </button>
+              )}
+
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage((p) => p + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Next ➡
+              </button>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Footer */}
+      <Footer />
 
       {/* Empty State */}
       {articles.length === 0 && selectedDate && (
         <div className="empty-state">
           <div className="empty-icon">📅</div>
-          <h3>No articles loaded yet</h3>
-          <p>Select a date and click "Fetch Latest News" to view articles</p>
+          <h3>No articles found</h3>
+          <p>For the selected date {selectedDate}, no articles were found.</p>
         </div>
+      )}
+
+      {/* Modal */}
+      {showModal && (
+        <Modal onClose={closeModal}>
+          <p className="modal-content-text">{modalContent}</p>
+        </Modal>
       )}
     </div>
   )

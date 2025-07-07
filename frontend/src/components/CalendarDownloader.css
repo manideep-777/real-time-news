@@ -3,10 +3,13 @@
   }
   
   .dashboard-container {
+    width: 100%;
+    margin: 0 auto; /* center horizontally */
+ /* allow responsiveness */
     min-height: 100vh;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    padding: 2rem;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; 
+    padding: 10px;
   }
   
   /* Header Section */
@@ -135,6 +138,24 @@
   .btn-third{
     background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   }
+
+  .btn-loader {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
   
   /* News Section */
   .news-section {
@@ -163,7 +184,6 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 2rem;
-    max-width: 1200px;
     margin: 0 auto;
   }
   
@@ -210,6 +230,9 @@
   }
   
   .article-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     border-top: 1px solid #e5e7eb;
     padding-top: 1rem;
   }
@@ -306,3 +329,60 @@
     }
   }
   
+
+
+
+
+  .btn-back {
+    position: absolute; /* Keep it positioned relative to the header */
+    top: 10px; /* Adjust vertical position */
+    left: 10px; /* Adjust horizontal position */
+    background-color: transparent; 
+    border: 1px solid #ffffff; /* Blue border to match the theme */
+    color: #ffffff; 
+    padding: 8px; /* Padding for better appearance */
+    cursor: pointer; /* Pointer cursor on hover */
+    border-radius: 5px; /* Rounded corners */
+    font-size: 16px; /* Font size */
+    font-family: Arial, sans-serif; /* Match the font */
+    transition: background-color 0.3s, color 0.3s; /* Smooth transition for hover effect */
+  }
+  
+  .btn-back:hover {
+    background-color: #007bff; /* Change background on hover */
+    color: white; /* Change text color on hover */
+  }
+
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 30px;
+    gap: 10px;
+  }
+  
+  .pagination-btn {
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .pagination-btn:hover {
+    background-color: #1976d2;
+  }
+  
+  .pagination-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  .pagination-btn.active {
+    background-color: #0d47a1;
+    font-weight: bold;
+  }
