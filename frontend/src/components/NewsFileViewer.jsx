@@ -52,6 +52,11 @@ function NewsFileViewer() {
     try {
       const response = await fetch(`${BASE_URL}/generate-pdf`, {
         method: "GET",
+        headers: {
+          Accept: "application/pdf",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
       });
 
       if (!response.ok) throw new Error("Failed to download PDF");
@@ -68,6 +73,7 @@ function NewsFileViewer() {
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Error downloading PDF:", err);
       setError("Failed to download PDF");

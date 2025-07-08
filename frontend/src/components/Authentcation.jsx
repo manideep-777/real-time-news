@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
 import "./Authentcation.css"
-import logo from "../assets/rtgs-logo.jpg.png";
+import logo from "../assets/Daily-News.svg";
 
   // ✅ Import the logo
 
@@ -11,7 +11,7 @@ const Authentication = () => {
   const navigate = useNavigate();
 
   const [loginData, setLoginData] = useState({
-    email: "",
+    username: "", 
     password: "",
   })
 
@@ -52,10 +52,7 @@ const Authentication = () => {
         <div className="auth-section signup-section">
           <div className="auth-form">
             {/* ✅ Add logo here */}
-            <img src={logo} alt="Real Time Governance Logo" className="auth-logo" />
-            <p style={{ textAlign: "center", fontWeight: "bold", marginTop: "10px" }}>
-              Powered by Real Time Governance <br></br>
-            </p>
+            <img src={logo} alt="Real Time Governance Logo" className="auth-logo" style={{}} />
           </div>
         </div>
 
@@ -68,16 +65,16 @@ const Authentication = () => {
             <form onSubmit={handleLoginSubmit} className="form">
               <div className="input-group">
                 <label htmlFor="login-email" className="label">
-                  Email Address
+                  Username
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   id="login-email"
-                  name="email"
-                  value={loginData.email}
+                  name="username"
+                  value={loginData.username}
                   onChange={handleLoginChange}
                   className="input"
-                  placeholder="Enter your email"
+                  placeholder="Enter your Username"
                   required
                 />
               </div>

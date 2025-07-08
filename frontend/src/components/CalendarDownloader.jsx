@@ -78,7 +78,7 @@ const CalendarDownloader = () => {
       return;
     }
 
-    const fetchUrl = `${BASE_URL}/published-articles-by-date?date=${selectedDate};`
+    const fetchUrl = `${BASE_URL}/published-articles-by-date?date=${selectedDate}`
 
     try {
       const response = await fetch(fetchUrl);
@@ -162,29 +162,38 @@ const CalendarDownloader = () => {
             {paginatedArticles.map((article, index) => (
               <div key={index} className="article-card">
                 <div className="article-header">
-                  <h3 className="article-headline">{article.headline}</h3>
+                  <h3 className="article-headline">{article.headline_ai}</h3>
                   <span className="article-date">{article.published_date}</span>
                 </div>
                 <div className="article-content">
                   <h3>Issue</h3>
-                  <p className="article-summary">{article.issue_reason?.replace(/^\./, "").trim()}</p>
+                  <p
+                className="article-summary"
+                dangerouslySetInnerHTML={{
+                  __html: article.issue_reason?.replace(/^\./, "").trim(),
+                }}
+              ></p>
                 </div>
                 <div className="article-footer">
                   <div className="footer-links">
+                    <div>
                     <a
                       onClick={() => openModal(article.content || article.description)}
                       className="source-link"
-                    >
+                      >
                       View Detailed Source
                     </a>
+                      </div>
+                      <div>
                     <a
                       href={article.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="read-more-link"
-                    >
+                      >
                       Read Full Article →
                     </a>
+                      </div>
                   </div>
                 </div>
 
@@ -259,3 +268,5 @@ const CalendarDownloader = () => {
 };
 
 export default CalendarDownloader;
+
+

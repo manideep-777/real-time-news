@@ -144,7 +144,7 @@
                 <div class="category-header">{{ cat.category_name }}</div>
                 <div class="content-text">
                     {% for issue in cat.issues %}
-                    • {{ issue }}<br><br>
+                    • {{ issue|safe }}<br><br>
                     {% endfor %}
                 </div>
             </div>
