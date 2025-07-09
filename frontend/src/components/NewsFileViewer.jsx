@@ -8,11 +8,12 @@ function NewsFileViewer() {
   const BASE_URL = import.meta.env.VITE_BASE_URL;
   const navigate = useNavigate();
   const [newsCards, setNewsCards] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState("");
+  // const [isSearching, setIsSearching] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const articlesPerPage = 9;
@@ -27,23 +28,38 @@ function NewsFileViewer() {
     setModalContent("");
   };
 
+  const handleSearch = async () => {
+    console.log("Searching...");
+  };
+
+
   const fetchNewsFile = async () => {
     setLoading(true);
     setError("");
     try {
       const response = await fetch(`${BASE_URL}/recent-published-articles`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
-
+      
       if (data.status === "success") {
         setNewsCards(data.articles || []);
+        if (data.articles && data.articles.length === 0) {
+          setError("No articles available at the moment");
+        }
       } else {
         setError(data.message || "Error fetching news");
       }
     } catch (err) {
       console.error("Error fetching news:", err);
-      setError("Failed to connect to server");
+      setError("Failed to connect to server. Please check your connection.");
+      setNewsCards([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const downloadPDF = async () => {
@@ -53,13 +69,13 @@ function NewsFileViewer() {
       const response = await fetch(`${BASE_URL}/generate-pdf`, {
         method: "GET",
         headers: {
-          Accept: "application/pdf",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          'Content-Type': 'application/json',
         },
       });
 
-      if (!response.ok) throw new Error("Failed to download PDF");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(new Blob([blob]));
@@ -76,7 +92,7 @@ function NewsFileViewer() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Error downloading PDF:", err);
-      setError("Failed to download PDF");
+      setError("Failed to download PDF. Please try again.");
     } finally {
       setIsDownloading(false);
     }
@@ -87,20 +103,45 @@ function NewsFileViewer() {
     navigate("/");
   };
 
+  const refreshNews = () => {
+    fetchNewsFile();
+  };
+
   useEffect(() => {
     fetchNewsFile();
-    const interval = setInterval(fetchNewsFile, 10 * 60 * 1000); // 10 mins
+    
+    // Auto-refresh every 10 minutes
+    const interval = setInterval(fetchNewsFile, 10 * 60 * 1000);
+    
     return () => clearInterval(interval);
-  }, []);
+  }, [BASE_URL]);
 
   useEffect(() => {
-    setCurrentPage(1); // reset page if new data comes in
+    setCurrentPage(1); // Reset to first page when new data arrives
   }, [newsCards]);
 
+  // Pagination calculations
   const indexOfLastArticle = currentPage * articlesPerPage;
   const indexOfFirstArticle = indexOfLastArticle - articlesPerPage;
   const currentArticles = newsCards.slice(indexOfFirstArticle, indexOfLastArticle);
   const totalPages = Math.ceil(newsCards.length / articlesPerPage);
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return dateString;
+    }
+  };
 
   return (
     <div className="news-viewer-container">
@@ -109,21 +150,52 @@ function NewsFileViewer() {
           <div className="seal-icon">🏛</div>
         </div>
         <h1 className="main-title">Daily Governance Report</h1>
-        <p className="subtitle">Official Government News & Updates</p>
+        <p className="subtitle">Official Government News & Updates Portal</p>
       </div>
 
       <div className="action-bar">
-        <button onClick={downloadPDF} className="btn btn-secondary2" disabled={loading || isDownloading}>
+        <button 
+          onClick={refreshNews} 
+          className="btn btn-secondary2" 
+          disabled={loading}
+        >
+          {loading ? <div className="btn-loader"></div> : <span className="btn-icon">🔄</span>}
+          {loading ? "Refreshing..." : "Refresh News"}
+        </button>
+
+        <button 
+          onClick={downloadPDF} 
+          className="btn btn-secondary2" 
+          disabled={loading || isDownloading || newsCards.length === 0}
+        >
           {isDownloading ? <div className="btn-loader"></div> : <span className="btn-icon">📰</span>}
           {isDownloading ? "Downloading..." : "Download PDF Report"}
         </button>
 
-        <button onClick={() => navigate("/calender")} className="btn btn-secondary3" disabled={loading}>
+        <button 
+          onClick={() => navigate("/calender")} 
+          className="btn btn-secondary3" 
+          disabled={loading}
+        >
           <span className="btn-icon">📅</span>
           Get Articles by Date
         </button>
 
-        <button onClick={handleLogout} className="btn btn-third" disabled={loading}>
+        <button 
+          onClick={handleSearch} 
+          className="btn btn-search" 
+          disabled={loading}
+        >
+          <span className="btn-icon">🔍</span>
+          Search Articles
+        </button>
+
+        <button 
+          onClick={handleLogout} 
+          className="btn btn-third" 
+          disabled={loading}
+        >
+          <span className="btn-icon">🚪</span>
           Log out
         </button>
       </div>
@@ -135,137 +207,188 @@ function NewsFileViewer() {
         </div>
       )}
 
-      {error && (
+      {error && !loading && (
         <div className="error-container">
           <div className="error-icon">⚠</div>
           <p className="error-text">{error}</p>
+          <button 
+            onClick={refreshNews} 
+            className="btn btn-secondary2" 
+            style={{ marginTop: '15px' }}
+          >
+            <span className="btn-icon">🔄</span>
+            Try Again
+          </button>
         </div>
       )}
 
-      <h1 style={{ padding: "10px", fontSize: "40px" }}>Today's news</h1>
+      {!loading && !error && (
+        <>
+          <h1 className="todays-news-title">
+            Today's News ({newsCards.length} {newsCards.length === 1 ? 'Article' : 'Articles'})
+          </h1>
 
-      <div className="news-grid">
-        {currentArticles.map((article, index) => (
-          <div key={index} className="news-card">
-            <div className="card-header">
-              {console.log(article)}
-              <h3 className="article-headline">{article.headline_ai}</h3>
-              <span className="article-date">{article.published_date}</span>
-            </div>
-            <div className="card-content">
-              <h3>Issue</h3>
-              <p
-                className="article-content"
-                dangerouslySetInnerHTML={{
-                  __html: article.issue_reason?.replace(/^\./, "").trim(),
-                }}
-              ></p>
-            </div>
-            <div className="card-footer">
-              <a
-                onClick={() => openModal(article.content || article.description)}
-                className="source-link"
-                style={{ marginLeft: "10px" }}
-              >
-                View Detailed Source
-              </a>
-              {article.url && (
-                <a
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="source-link"
-                >
-                  View Original Source →
-                </a>
+          {newsCards.length > 0 ? (
+            <>
+              <div className="news-grid">
+                {currentArticles.map((article, index) => (
+                  <div key={article.id || index} className="news-card">
+                    <div className="card-header">
+                      <h3 className="article-headline">
+                        {article.headline_ai || article.title || 'No Title Available'}
+                      </h3>
+                      <span className="article-date">
+                        {formatDate(article.published_date || article.date || new Date().toISOString())}
+                      </span>
+                    </div>
+                    <div className="card-content">
+                      <h3>Issue</h3>
+                      <p
+                        className="article-content"
+                        dangerouslySetInnerHTML={{
+                          __html: (article.issue_reason || article.summary || article.description || 'No description available')
+                            .replace(/^\./, "").trim(),
+                        }}
+                      ></p>
+                    </div>
+                    <div className="card-footer">
+                      {(article.content || article.full_content || article.body) && (
+                        <a
+                          onClick={() => openModal(
+                            article.content || 
+                            article.full_content || 
+                            article.body || 
+                            article.description || 
+                            'No detailed content available'
+                          )}
+                          className="source-link"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          📖 View Detailed Source
+                        </a>
+                      )}
+                      {article.url && (
+                        <a
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="source-link"
+                        >
+                          🔗 View Original Source
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="pagination">
+                  <button
+                    className="pagination-btn"
+                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    ⬅ Prev
+                  </button>
+
+                  {/* Always show first page */}
+                  <button
+                    className={`pagination-btn ${currentPage === 1 ? "active" : ""}`}
+                    onClick={() => setCurrentPage(1)}
+                  >
+                    1
+                  </button>
+
+                  {/* Show left dots if needed */}
+                  {currentPage > 3 && totalPages > 5 && <span>...</span>}
+
+                  {/* Pages around current */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((page) => {
+                      if (page === 1 || page === totalPages) return false;
+                      if (currentPage <= 3) return page <= 4;
+                      if (currentPage >= totalPages - 2) return page >= totalPages - 3;
+                      return Math.abs(page - currentPage) <= 1;
+                    })
+                    .map((page) => (
+                      <button
+                        key={page}
+                        className={`pagination-btn ${currentPage === page ? "active" : ""}`}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </button>
+                    ))}
+
+                  {/* Show right dots if needed */}
+                  {currentPage < totalPages - 2 && totalPages > 5 && <span>...</span>}
+
+                  {/* Always show last page if not shown */}
+                  {totalPages > 1 && (
+                    <button
+                      className={`pagination-btn ${currentPage === totalPages ? "active" : ""}`}
+                      onClick={() => setCurrentPage(totalPages)}
+                    >
+                      {totalPages}
+                    </button>
+                  )}
+
+                  <button
+                    className="pagination-btn"
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next ➡
+                  </button>
+                </div>
               )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {newsCards.length === 0 && !loading && !error && (
-        <div className="empty-state">
-          <div className="empty-icon">📋</div>
-          <h3>No Reports Available</h3>
-          <p>
-            There are no reports to display at the moment. New reports will
-            appear here automatically.
-          </p>
-        </div>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            className="pagination-btn"
-            onClick={() => setCurrentPage((prev) => prev - 1)}
-            disabled={currentPage === 1}
-          >
-            ⬅ Prev
-          </button>
-
-          {/* Always show first page */}
-          <button
-            className={`pagination-btn ${currentPage === 1 ? "active" : ""}`}
-            onClick={() => setCurrentPage(1)}
-          >
-            1
-          </button>
-
-          {/* Show left dots if needed */}
-          {currentPage > 3 && totalPages > 5 && <span>...</span>}
-
-          {/* Pages around current */}
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter((page) => {
-              if (page === 1 || page === totalPages) return false;
-              if (currentPage <= 3) return page <= 4;
-              if (currentPage >= totalPages - 2) return page >= totalPages - 3;
-              return Math.abs(page - currentPage) <= 1;
-            })
-            .map((page) => (
-              <button
-                key={page}
-                className={`pagination-btn ${currentPage === page ? "active" : ""}`}
-                onClick={() => setCurrentPage(page)}
+            </>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-icon">📋</div>
+              <h3>No Reports Available</h3>
+              <p>
+                There are no reports to display at the moment. New reports will
+                appear here automatically.
+              </p>
+              <button 
+                onClick={refreshNews} 
+                className="btn btn-secondary2" 
+                style={{ marginTop: '20px' }}
               >
-                {page}
+                <span className="btn-icon">🔄</span>
+                Refresh
               </button>
-            ))}
-
-          {/* Show right dots if needed */}
-          {currentPage < totalPages - 2 && totalPages > 5 && <span>...</span>}
-
-          {/* Always show last page if not shown */}
-          {totalPages > 1 && (
-            <button
-              className={`pagination-btn ${currentPage === totalPages ? "active" : ""}`}
-              onClick={() => setCurrentPage(totalPages)}
-            >
-              {totalPages}
-            </button>
+            </div>
           )}
-
-          <button
-            className="pagination-btn"
-            onClick={() => setCurrentPage((prev) => prev + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Next ➡
-          </button>
-        </div>
+        </>
       )}
+
       <Footer />
 
       {showModal && (
         <Modal onClose={closeModal}>
-          <p className="modal-content-text">{modalContent}</p>
+          <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+            <h2 style={{ 
+              marginBottom: '20px', 
+              color: '#1e40af', 
+              borderBottom: '2px solid #e5e7eb', 
+              paddingBottom: '10px' 
+            }}>
+              Detailed Article Content
+            </h2>
+            <div 
+              className="modal-content-text" 
+              style={{ lineHeight: '1.8', fontSize: '16px' }}
+              dangerouslySetInnerHTML={{ __html: modalContent }}
+            />
+          </div>
         </Modal>
       )}
-    </div>
 
+    </div>
   );
 }
 

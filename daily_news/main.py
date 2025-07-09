@@ -24,8 +24,10 @@ from difflib import SequenceMatcher
 import anthropic
 
 # Load environment variables
-if os.getenv("FLASK_ENV") != "production":
-    load_dotenv()
+# if os.getenv("FLASK_ENV") != "production":
+#     load_dotenv()
+
+load_dotenv()
 
 # --- Client Initializations ---
 app = Flask(__name__)
@@ -36,6 +38,8 @@ CORS(app, supports_credentials=True)
 API_KEY = os.getenv("NEWS_API_KEY")
 SECRET_KEY = os.getenv("SECRET_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
+# print("ANTHROPIC_API_KEY:", repr(ANTHROPIC_API_KEY))
 
 # Check for missing environment variables
 if not all([API_KEY, SECRET_KEY, ANTHROPIC_API_KEY]):
@@ -222,7 +226,7 @@ def fetch_and_store_news_logic():
 
             collection.insert_one({
                 "article_id": article.get("article_id"),
-                "headline": clean_text(result.get("title", "No headline")),
+                "headline": clean_text(result.get("headline", "No headline")),
                 "headline_ai": clean_text(result.get("headline_ai", "No headline")),
                 "source": clean_text(article.get("source_id", "Unknown")),
                 "url": clean_text(article.get("link", "No URL")),
@@ -526,6 +530,54 @@ def start_root():
     date_str = datetime.now().strftime("%d-%m-%Y")
     
     return render_template("code.html", date=date_str, categories=categories)
+
+
+@app.route("/search-articles", methods=["GET"])
+def search_articles():
+    keyword = request.args.get("keyword")
+    if not keyword:
+        return jsonify({"status": "error", "message": "Missing 'keyword' parameter"}), 400
+
+    keyword = keyword.lower()
+
+    # Build regex query (case-insensitive)
+    regex = {"$regex": re.escape(keyword), "$options": "i"}
+
+    query = {
+        "$or": [
+            {"headline": regex},
+            {"headline_ai": regex},
+            {"description": regex},
+            {"description_ai": regex},
+            {"content": regex},
+            {"tags": regex},
+            {"keywords": regex},
+            {"issue_reason": regex},
+        ]
+    }
+
+    try:
+        results = list(collection.find(query).sort("published_date", -1))
+        articles = [
+            {
+                "headline": a.get("headline"),
+                "headline_ai": a.get("headline_ai"),
+                "description": a.get("description"),
+                "description_ai": a.get("description_ai"),
+                "content": a.get("content"),
+                "tags": a.get("tags"),
+                "keywords": a.get("keywords"),
+                "published_date": a.get("published_date"),
+                "url": a.get("url"),
+                "issue_reason": a.get("issue_reason"),
+            }
+            for a in results
+        ]
+        return jsonify({"status": "success", "count": len(articles), "articles": articles})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 
 # --- Background Scheduler ---
 

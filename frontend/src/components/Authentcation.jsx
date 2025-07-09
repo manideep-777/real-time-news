@@ -1,27 +1,20 @@
-import { useNavigate } from "react-router-dom"
-import { useState } from "react"
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import "./Authentcation.css";
+import logo from "../assets/ap-logo.png";
 import { toast } from "react-hot-toast"
-import "./Authentcation.css"
-import logo from "../assets/Daily-News.svg";
-
-  // ✅ Import the logo
 
 const Authentication = () => {
+  const [loginData, setLoginData] = useState({ username: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const BASE_URL = import.meta.env.VITE_BASE_URL
   const navigate = useNavigate();
 
-  const [loginData, setLoginData] = useState({
-    username: "", 
-    password: "",
-  })
+  const handleChange = (e) => {
+    setLoginData({ ...loginData, [e.target.name]: e.target.value });
+  };
 
-  const handleLoginChange = (e) => {
-    setLoginData({
-      ...loginData,
-      [e.target.name]: e.target.value,
-    })
-  }
-
+  
   const handleLoginSubmit = async (e) => {
     e.preventDefault()
 
@@ -46,64 +39,70 @@ const Authentication = () => {
   }
 
   return (
-    <div className="auth-container">
-      <div className="auth-wrapper">
-        {/* Sign Up Section - Left Side */}
-        <div className="auth-section signup-section">
-          <div className="auth-form">
-            {/* ✅ Add logo here */}
-            <img src={logo} alt="Real Time Governance Logo" className="auth-logo" style={{}} />
+    <div className="login-container">
+      <div className="login-wrapper">
+        {/* Left Section */}
+        <div className="login-left">
+          <img src={logo} alt="AP Logo" className="ap-logo" />
+          <h1>Real Time Governance</h1>
+          <p>
+            Secure, transparent, and efficient governance solutions powered by
+            cutting-edge technology
+          </p>
+          <div className="dots">
+            <span className="dot active" />
+            <span className="dot" />
+            <span className="dot" />
           </div>
+          <small>
+            Join thousands of organizations transforming their governance
+            processes
+          </small>
         </div>
 
-        {/* Login Section - Right Side */}
-        <div className="auth-section login-section">
-          <div className="auth-form">
-            <h2 className="auth-title">Welcome Back</h2>
-            <p className="auth-subtitle">Sign in to your account</p>
+        {/* Right Section */}
+        <div className="login-right">
+          <h2>Welcome Back</h2>
+          <p>Please sign in to your account</p>
 
-            <form onSubmit={handleLoginSubmit} className="form">
-              <div className="input-group">
-                <label htmlFor="login-email" className="label">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  id="login-email"
-                  name="username"
-                  value={loginData.username}
-                  onChange={handleLoginChange}
-                  className="input"
-                  placeholder="Enter your Username"
-                  required
-                />
-              </div>
+          <form onSubmit={handleLoginSubmit}>
+            <label>Username</label>
+            <input
+              type="text"
+              name="username"
+              placeholder="Enter your username"
+              value={loginData.username}
+              onChange={handleChange}
+              required
+            />
 
-              <div className="input-group">
-                <label htmlFor="login-password" className="label">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  id="login-password"
-                  name="password"
-                  value={loginData.password}
-                  onChange={handleLoginChange}
-                  className="input"
-                  placeholder="Enter your password"
-                  required
-                />
-              </div>
-
-              <button type="submit" className="btn btn-secondary">
-                Sign In
+            <label>Password</label>
+            <div className="password-box">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Enter your password"
+                value={loginData.password}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                👁
               </button>
-            </form>
-          </div>
+            </div>
+
+            <button type="submit" className="sign-in-btn">
+              Sign In
+            </button>
+          </form>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Authentication
+export default Authentication;

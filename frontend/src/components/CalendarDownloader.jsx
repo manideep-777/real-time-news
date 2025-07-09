@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import "./CalendarDownloader.css";
+import "./CalendarDownloader.css";  
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import Modal from './Modal';
@@ -59,7 +59,7 @@ const CalendarDownloader = () => {
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `daily_governance_report_${selectedDate}.pdf`);
+      link.setAttribute("download",`daily_governance_report_${selectedDate}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
@@ -78,7 +78,7 @@ const CalendarDownloader = () => {
       return;
     }
 
-    const fetchUrl = `${BASE_URL}/published-articles-by-date?date=${selectedDate}`
+    const fetchUrl = `${BASE_URL}/published-articles-by-date?date=${selectedDate}`;
 
     try {
       const response = await fetch(fetchUrl);
@@ -154,7 +154,7 @@ const CalendarDownloader = () => {
       {paginatedArticles.length > 0 && (
         <div className="news-section">
           <div className="news-header">
-            <h2 className="news-title">📰 News Articles for {formatDate(selectedDate)}</h2>
+            <h2 className="news-title"> News Articles for {formatDate(selectedDate)}</h2>
             <p className="news-count">{articles.length} articles found</p>
           </div>
 
@@ -167,33 +167,24 @@ const CalendarDownloader = () => {
                 </div>
                 <div className="article-content">
                   <h3>Issue</h3>
-                  <p
-                className="article-summary"
-                dangerouslySetInnerHTML={{
-                  __html: article.issue_reason?.replace(/^\./, "").trim(),
-                }}
-              ></p>
+                  <p className="article-summary">{article.issue_reason?.replace(/^\./, "").trim()}</p>
                 </div>
                 <div className="article-footer">
                   <div className="footer-links">
-                    <div>
                     <a
                       onClick={() => openModal(article.content || article.description)}
                       className="source-link"
-                      >
+                    >
                       View Detailed Source
                     </a>
-                      </div>
-                      <div>
                     <a
                       href={article.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="read-more-link"
-                      >
+                    >
                       Read Full Article →
                     </a>
-                      </div>
                   </div>
                 </div>
 
@@ -244,6 +235,9 @@ const CalendarDownloader = () => {
         </div>
       )}
 
+      {/* Footer */}
+      <Footer />
+
       {/* Empty State */}
       {articles.length === 0 && selectedDate && (
         <div className="empty-state">
@@ -259,14 +253,8 @@ const CalendarDownloader = () => {
           <p className="modal-content-text">{modalContent}</p>
         </Modal>
       )}
-
-      {/* Footer */}  
-      <Footer />
-
     </div>
   );
 };
 
 export default CalendarDownloader;
-
-

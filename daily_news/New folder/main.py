@@ -222,7 +222,7 @@ def fetch_and_store_news_logic():
 
             collection.insert_one({
                 "article_id": article.get("article_id"),
-                "headline": clean_text(result.get("title", "No headline")),
+                "headline": clean_text(result.get("headline", "No headline")),
                 "headline_ai": clean_text(result.get("headline_ai", "No headline")),
                 "source": clean_text(article.get("source_id", "Unknown")),
                 "url": clean_text(article.get("link", "No URL")),
