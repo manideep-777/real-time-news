@@ -6,6 +6,7 @@ import './App.css'
 import Authentication from './components/Authentcation';
 import CalendarDownloader from './components/CalendarDownloader';
 import ProtectedRoute from "./components/ProtectedRoute"
+import Search from './components/Search';
 function App() {
 
   return (
@@ -25,6 +26,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CalendarDownloader />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <ProtectedRoute>
+              <Search />
             </ProtectedRoute>
           }
         />

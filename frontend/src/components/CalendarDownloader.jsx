@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import "./CalendarDownloader.css";  
+import "./CalendarDownloader.css";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import Modal from './Modal';
 import Footer from "./Footer";
+import rtgsLogo from '../assets/rtgs-logo.png'
+import apLogo from '../assets/AP-logo.png'
 
 const CalendarDownloader = () => {
   const navigate = useNavigate();
@@ -45,7 +47,7 @@ const CalendarDownloader = () => {
     }
 
     setIsDownloading(true);
-    const downloadUrl =`${BASE_URL}/generate-pdf-by-date?date=${selectedDate}`;
+    const downloadUrl = `${BASE_URL}/generate-pdf-by-date?date=${selectedDate}`;
 
     try {
       const response = await fetch(downloadUrl);
@@ -59,7 +61,7 @@ const CalendarDownloader = () => {
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download",`daily_governance_report_${selectedDate}.pdf`);
+      link.setAttribute("download", `daily_governance_report_${selectedDate}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
@@ -119,29 +121,26 @@ const CalendarDownloader = () => {
 
   return (
     <div className="dashboard-container">
+      <div className="corner-logos">
+        <div className="logo-container left-logo">
+          <div className="logo-background">
+            <img src={apLogo} alt="AP Government" className="logo-image" />
+          </div>
+        </div>
+        <div className="logo-container right-logo">
+          <div className="logo-background rtgs-bg">
+            <img src={rtgsLogo} alt="RTGS" className="logo-image" />
+          </div>
+        </div>
+      </div>
       {/* Header */}
       <div className="header-section">
-        <button onClick={handleBack} className="btn btn-back">&#x2B05; Back</button>
-        <div className="government-icon"><div className="seal-icon">🏛</div></div>
+        {/* <button onClick={handleBack} className="btn btn-back" >&#x2B05; Back</button> */}
+        {/* <div className="government-icon"><div className="seal-icon">🏛</div></div> */}
         <h1 className="main-title">Daily Governance Report</h1>
         <p className="subtitle">Official Government News & Updates</p>
-      </div>
-
-      {/* Actions */}
-      <div className="action-section">
-        <div className="date-selector">
-          <label htmlFor="date-input" className="date-label">Select Date:</label>
-          <input
-            id="date-input"
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="date-input"
-            required
-          />
-        </div>
-
         <div className="button-group">
+          <button onClick={handleBack} className="btn btn-third">&#x2B05; Back</button>
           <button type="button" onClick={handleDownload} className="btn btn-download" disabled={isDownloading}>
             {isDownloading ? <div className="btn-loader"></div> : <span className="btn-icon">📄</span>}
             {isDownloading ? "Downloading..." : "Download PDF Report"}
@@ -154,8 +153,26 @@ const CalendarDownloader = () => {
       {paginatedArticles.length > 0 && (
         <div className="news-section">
           <div className="news-header">
-            <h2 className="news-title"> News Articles for {formatDate(selectedDate)}</h2>
-            <p className="news-count">{articles.length} articles found</p>
+            <div>
+              <h2 className="news-title"> News Articles for {formatDate(selectedDate)}</h2>
+              <p className="news-count">{articles.length} articles found</p>
+            </div>
+            <div>
+              {/* Actions */}
+              <div className="action-section">
+                <div className="date-selector">
+                  <label htmlFor="date-input" className="date-label">Select Date:</label>
+                  <input
+                    id="date-input"
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="date-input"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="articles-grid">
@@ -165,9 +182,18 @@ const CalendarDownloader = () => {
                   <h3 className="article-headline">{article.headline_ai}</h3>
                   <span className="article-date">{article.published_date}</span>
                 </div>
+                <div>
+                  <b>Department :</b> {article.department || 'Unknown'}
+                </div>
                 <div className="article-content">
                   <h3>Issue</h3>
-                  <p className="article-summary">{article.issue_reason?.replace(/^\./, "").trim()}</p>
+                  <p
+                    className="article-summary"
+                    dangerouslySetInnerHTML={{
+                      __html: (article.issue_reason || article.summary || article.description || 'No description available')
+                        .replace(/^\./, "").trim(),
+                    }}
+                  ></p>
                 </div>
                 <div className="article-footer">
                   <div className="footer-links">
@@ -235,9 +261,6 @@ const CalendarDownloader = () => {
         </div>
       )}
 
-      {/* Footer */}
-      <Footer />
-
       {/* Empty State */}
       {articles.length === 0 && selectedDate && (
         <div className="empty-state">
@@ -253,6 +276,8 @@ const CalendarDownloader = () => {
           <p className="modal-content-text">{modalContent}</p>
         </Modal>
       )}
+      {/* Footer */}
+      <Footer />
     </div>
   );
 };

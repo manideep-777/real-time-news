@@ -89,6 +89,59 @@ def is_not_english(text):
 
 
 
+# def build_issue_check_prompt(article):
+#     prompt = """
+# You are a governance and public policy AI expert.
+
+# You will be given a single news article from Andhra Pradesh or nearby regions.
+
+# Your task:
+# - Determine whether the article discusses a major negative issue such as:
+#   - Public problems, governance failures, crime, unrest, corruption, disasters, or any serious public concern.
+# - ⛔ Strictly EXCLUDE:
+#   - Telangana-related news
+#   - Any political coverage (election campaigns, party statements, leader speeches, political promotion)
+# - ✅ Only include stories impacting the general public negatively and located in Andhra Pradesh.
+
+# Output rules:
+# - If the article is NOT an issue or is about Telangana or politics, return ONLY:
+#   {"is_issue": "NO"}
+
+# - If it IS a public issue in Andhra Pradesh, return ONLY the following full JSON object:
+# {
+#   "headline": "<Original headline in English (translate if in Telugu)>",
+#   "description": "<Original description in English (translate if in Telugu)>",
+#   "headline_ai": "<5–6 word summary>",
+#   "is_issue": "YES",
+#   "reason_html": "<3-line HTML explanation with <b>Location</b>>",
+#   "description_ai": "<2-paragraph English summary>",
+#   "content": "<2-paragraph English summary>"
+# }
+
+# Instructions:
+# - If `headline` or `description` is in Telugu, translate to English and return.
+# - If already in English, keep as is.
+# - Translate and summarize `description` and `content` into fluent English (2 short paragraphs).
+# - NEVER include anything outside the required JSON object.
+# """
+
+#     def clean_for_prompt(text):
+#         return ''.join(c for c in text if c.isprintable()).strip()
+
+#     title = clean_for_prompt(article.get("title", ""))
+#     desc = clean_for_prompt(article.get("description") or "")
+#     content = clean_for_prompt(article.get("content") or "")
+#     keywords = article.get("keywords") or []
+
+#     prompt += f"""
+# Original Headline: {title}
+# Description: {desc}
+# Content: {content[:1000]}
+# Keywords: {keywords}
+# """
+#     return prompt.strip()
+
+
 def build_issue_check_prompt(article):
     prompt = """
 You are a governance and public policy AI expert.
@@ -96,18 +149,28 @@ You are a governance and public policy AI expert.
 You will be given a single news article from Andhra Pradesh or nearby regions.
 
 Your task:
-- Determine whether the article discusses a major negative issue such as:
-  - Public problems, governance failures, crime, unrest, corruption, disasters, or any serious public concern.
-- ⛔ Strictly EXCLUDE:
-  - Telangana-related news
-  - Any political coverage (election campaigns, party statements, leader speeches, political promotion)
-- ✅ Only include stories impacting the general public negatively and located in Andhra Pradesh.
+1. Determine whether the article discusses a **major negative issue** such as:
+   - Public problems, governance failures, crime, unrest, corruption, disasters, or any serious public concern.
 
-Output rules:
-- If the article is NOT an issue or is about Telangana or politics, return ONLY:
-  {"is_issue": "NO"}
+2. ⛔ Strictly EXCLUDE:
+   - Telangana-related news
+   - Any political coverage (election campaigns, party statements, leader speeches, political promotion)
 
-- If it IS a public issue in Andhra Pradesh, return ONLY the following full JSON object:
+3. ✅ Only include stories impacting the **general public negatively** and **located in Andhra Pradesh**.
+
+---
+
+Your responsibilities:
+- Read the article and identify if it's a serious public issue.
+- If yes, classify the issue into **one appropriate government department** from the list below.
+- Departments are used to route issues to the right authorities.
+
+---
+
+🛑 If the article is NOT a public issue or is about Telangana/politics, return:
+```json
+{"is_issue": "NO"}
+✅ If it is a public issue, return the following structured JSON:
 {
   "headline": "<Original headline in English (translate if in Telugu)>",
   "description": "<Original description in English (translate if in Telugu)>",
@@ -115,14 +178,17 @@ Output rules:
   "is_issue": "YES",
   "reason_html": "<3-line HTML explanation with <b>Location</b>>",
   "description_ai": "<2-paragraph English summary>",
-  "content": "<2-paragraph English summary>"
+  "content": "<2-paragraph English summary>",
+  "department": "<Select the best-fit department from the list below>"
 }
-
+Available Departments:
+Agriculture And Co-operation, Animal Husbandry, Dairy Development and Fisheries, AP NRTS, APPSC, Backward Classes Welfare, Chief Minister's relief fund (CMRF), Consumer Affairs, Food and Civil Supplies, Corona, Department of Economically Weaker Sections Welfare, Department of Skills Development and Training, Disaster Management, Energy, Environment, Forest, Science And Technology, Finance, General Administration, Grama Volunteers/Ward Volunteers And Village Secretariats/Ward Secretariats, Health, Medical And Family Welfare, Home, Housing, Human Resources (Higher Education), Human Resources (School Education), Industries and Commerce, Information Technology, Electronics and Communications, Infrastructure And Investments, Labour, Factories, Boilers And Insurance Medical Services, Law, Minorities Welfare, Municipal Administration And Urban Development, Panchayat Raj And Rural Development, Planning, Public Enterprises, Revenue, Social Welfare, Transport, Roads and Buildings, Tribal Welfare, Water Resources, Women, Children, Disabled and Senior Citizens, Youth Advancement, Tourism And Culture.
 Instructions:
-- If `headline` or `description` is in Telugu, translate to English and return.
-- If already in English, keep as is.
-- Translate and summarize `description` and `content` into fluent English (2 short paragraphs).
-- NEVER include anything outside the required JSON object.
+Detect and translate headline or description if in Telugu.
+Translate and summarize description and content in fluent English.
+Match the core issue with the most related department.
+
+⚠️ Output must be only valid JSON — no markdown, explanation, or formatting outside the JSON.
 """
 
     def clean_for_prompt(text):
@@ -134,6 +200,7 @@ Instructions:
     keywords = article.get("keywords") or []
 
     prompt += f"""
+
 Original Headline: {title}
 Description: {desc}
 Content: {content[:1000]}
@@ -142,14 +209,13 @@ Keywords: {keywords}
     return prompt.strip()
 
 
-
 def check_if_issue(article):
     prompt = build_issue_check_prompt(article)
     print("Prompt length:", len(prompt))
     try:
         response = client.messages.create(
             model="claude-3-5-sonnet-20240620",
-            max_tokens=4096,
+            max_tokens= 8000, 
             temperature=0.3,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -238,7 +304,8 @@ def fetch_and_store_news_logic():
                 "tags": article.get("category", []),
                 "keywords": article.get("keywords", []),
                 "issue_reason": result.get("reason_html", ""),
-                "stored_at": datetime.now(timezone.utc)
+                "stored_at": datetime.now(timezone.utc),
+                "department": result.get("department", "Unknown"),
             })
             stored_count += 1
             time.sleep(3)
@@ -276,6 +343,7 @@ def get_articles_logic(time_format="%Y-%m-%d %H:%M:%S", date_str=None):
             "published_date": a.get("published_date"),
             "url": a.get("url"),
             "issue_reason": a.get("issue_reason"),
+            "department": a.get("department"),
         } for a in articles
     ]
 
@@ -293,16 +361,18 @@ def summarize_news_logic(articles):
     prompt = f"""
 You are a high-precision regional news summarization AI focused on Andhra Pradesh.
 
-Below is a list of news issues, each with a short explanation:
+Below is a list of public news issues, each with a short explanation:
 \"\"\"{combined_content}\"\"\"
 
 Your task:
-1. Go through all issues and group them logically into meaningful categories based on their content (e.g., Floods, Crime, Accidents, Education, Healthcare, Infrastructure, Corruption etc.).
-2. There is **no limit or fixed number of categories**. You must dynamically decide what categories make sense.
-3. Each category must contain **all matching issues**.
-4. Each issue should remain in **its original sentence form**, with **exact location** (district/city/town) included.
+1. Go through all issues and **ONLY INCLUDE major public issues** — serious concerns such as:
+   - Governance failures, disasters, crime, corruption, unrest, major public complaints, severe infrastructure problems, public health crises, or service delivery failures.
+2. Ignore and exclude minor updates, political promotion, soft news, or Telangana-related content.
+3. Group valid issues into **logical categories** such as Floods, Crime, Accidents, Education, Healthcare, Infrastructure, Corruption, etc.
+4. The number and type of categories must be **dynamically decided** based on content.
+5. Each issue should stay in its **original sentence form**, with **location** (district/city/town) included.
 
-Output strictly in this JSON format:
+Respond ONLY in this strict JSON format:
 {{
   "categories": [
     {{
@@ -317,12 +387,12 @@ Output strictly in this JSON format:
   ]
 }}
 
-Only return the JSON. No explanations, comments or markdown.
+⚠️ Return **only the JSON**. No explanations, comments or markdown.
 """
     try:
         response = client.messages.create(
         model="claude-3-5-sonnet-20240620",
-        max_tokens=4096,
+        max_tokens= 8000, 
         temperature=0,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -570,6 +640,7 @@ def search_articles():
                 "published_date": a.get("published_date"),
                 "url": a.get("url"),
                 "issue_reason": a.get("issue_reason"),
+                "department": a.get("department"),
             }
             for a in results
         ]

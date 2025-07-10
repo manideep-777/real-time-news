@@ -3,6 +3,9 @@ import Modal from './Modal';
 import { useNavigate } from "react-router-dom";
 import "./NewsFileViewer.css";
 import Footer from "./Footer";
+import { toast } from 'react-hot-toast';
+import rtgsLogo from '../assets/rtgs-logo.png'
+import apLogo from '../assets/AP-logo.png'
 
 function NewsFileViewer() {
   const BASE_URL = import.meta.env.VITE_BASE_URL;
@@ -13,6 +16,8 @@ function NewsFileViewer() {
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
   // const [isSearching, setIsSearching] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -28,9 +33,35 @@ function NewsFileViewer() {
     setModalContent("");
   };
 
-  const handleSearch = async () => {
-    console.log("Searching...");
-  };
+  // const handleSearch = () => {
+  //   navigate("/search");
+  // };
+
+  useEffect(() => {
+    const delay = setTimeout(async () => {
+      if (searchQuery.trim().length > 1) {
+        try {
+          const res = await fetch(`${BASE_URL}/search-articles?keyword=${encodeURIComponent(searchQuery.trim())}`);
+          const data = await res.json();
+
+          if (data.status === "success") {
+            setSearchResults(data.articles || []);
+            setCurrentPage(1);
+            toast.success(`${data.articles.length} articles found`);
+          } else {
+            toast.error(data.message || "Search failed.");
+          }
+        } catch (err) {
+          toast.error("Error fetching search results.");
+          console.error(err);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(delay);
+  }, [searchQuery, BASE_URL]);
 
 
   const fetchNewsFile = async () => {
@@ -38,13 +69,13 @@ function NewsFileViewer() {
     setError("");
     try {
       const response = await fetch(`${BASE_URL}/recent-published-articles`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.status === "success") {
         setNewsCards(data.articles || []);
         if (data.articles && data.articles.length === 0) {
@@ -109,10 +140,10 @@ function NewsFileViewer() {
 
   useEffect(() => {
     fetchNewsFile();
-    
+
     // Auto-refresh every 10 minutes
     const interval = setInterval(fetchNewsFile, 10 * 60 * 1000);
-    
+
     return () => clearInterval(interval);
   }, [BASE_URL]);
 
@@ -123,8 +154,9 @@ function NewsFileViewer() {
   // Pagination calculations
   const indexOfLastArticle = currentPage * articlesPerPage;
   const indexOfFirstArticle = indexOfLastArticle - articlesPerPage;
-  const currentArticles = newsCards.slice(indexOfFirstArticle, indexOfLastArticle);
-  const totalPages = Math.ceil(newsCards.length / articlesPerPage);
+  const articlesToShow = searchResults.length > 0 ? searchResults : newsCards;
+  const currentArticles = articlesToShow.slice(indexOfFirstArticle, indexOfLastArticle);
+  const totalPages = Math.ceil(articlesToShow.length / articlesPerPage);
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -145,59 +177,72 @@ function NewsFileViewer() {
 
   return (
     <div className="news-viewer-container">
-      <div className="header-section">
-        <div className="government-seal">
-          <div className="seal-icon">🏛</div>
+      {/* Corner Logos */}
+      <div className="corner-logos">
+        <div className="logo-container left-logo">
+          <div className="logo-background">
+            <img src={apLogo} alt="AP Government" className="logo-image" />
+          </div>
         </div>
-        <h1 className="main-title">Daily Governance Report</h1>
-        <p className="subtitle">Official Government News & Updates Portal</p>
+        <div className="logo-container right-logo">
+          <div className="logo-background rtgs-bg">
+            <img src={rtgsLogo} alt="RTGS" className="logo-image" />
+          </div>
+        </div>
       </div>
 
-      <div className="action-bar">
-        <button 
-          onClick={refreshNews} 
-          className="btn btn-secondary2" 
+      <div className="header-section2">
+        {/* <div className="government-seal">
+          <div className="seal-icon">🏛</div>
+        </div> */}
+        <h1 className="main-title">Daily Governance Report</h1>
+        <p className="subtitle">Official Government News & Updates Portal</p>
+        <div className="action-bar">
+        <button
+          onClick={refreshNews}
+          className="btn btn-secondary2"
           disabled={loading}
         >
           {loading ? <div className="btn-loader"></div> : <span className="btn-icon">🔄</span>}
           {loading ? "Refreshing..." : "Refresh News"}
         </button>
 
-        <button 
-          onClick={downloadPDF} 
-          className="btn btn-secondary2" 
+        <button
+          onClick={downloadPDF}
+          className="btn btn-secondary2"
           disabled={loading || isDownloading || newsCards.length === 0}
         >
           {isDownloading ? <div className="btn-loader"></div> : <span className="btn-icon">📰</span>}
           {isDownloading ? "Downloading..." : "Download PDF Report"}
         </button>
 
-        <button 
-          onClick={() => navigate("/calender")} 
-          className="btn btn-secondary3" 
+        <button
+          onClick={() => navigate("/calender")}
+          className="btn btn-secondary3"
           disabled={loading}
         >
           <span className="btn-icon">📅</span>
           Get Articles by Date
         </button>
 
-        <button 
-          onClick={handleSearch} 
-          className="btn btn-search" 
+        {/* <button
+          onClick={handleSearch}
+          className="btn btn-search"
           disabled={loading}
         >
           <span className="btn-icon">🔍</span>
           Search Articles
-        </button>
+        </button> */}
 
-        <button 
-          onClick={handleLogout} 
-          className="btn btn-third" 
+        <button
+          onClick={handleLogout}
+          className="btn btn-third"
           disabled={loading}
         >
           <span className="btn-icon">🚪</span>
           Log out
         </button>
+      </div>
       </div>
 
       {loading && (
@@ -211,9 +256,9 @@ function NewsFileViewer() {
         <div className="error-container">
           <div className="error-icon">⚠</div>
           <p className="error-text">{error}</p>
-          <button 
-            onClick={refreshNews} 
-            className="btn btn-secondary2" 
+          <button
+            onClick={refreshNews}
+            className="btn btn-secondary2"
             style={{ marginTop: '15px' }}
           >
             <span className="btn-icon">🔄</span>
@@ -224,9 +269,24 @@ function NewsFileViewer() {
 
       {!loading && !error && (
         <>
-          <h1 className="todays-news-title">
-            Today's News ({newsCards.length} {newsCards.length === 1 ? 'Article' : 'Articles'})
-          </h1>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <h1 className="todays-news-title">
+                {searchResults.length > 0
+                  ? `Search Results (${searchResults.length} Articles)`
+                  : `Today's News (${newsCards.length} Articles)`}
+              </h1>
+            </div>
+            <div className="search-bar">
+              <input
+                type="text"
+                placeholder="Search articles..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+            </div>
+          </div>
 
           {newsCards.length > 0 ? (
             <>
@@ -240,6 +300,9 @@ function NewsFileViewer() {
                       <span className="article-date">
                         {formatDate(article.published_date || article.date || new Date().toISOString())}
                       </span>
+                    </div>
+                    <div>
+                      <b>Department :</b> {article.department || 'Unknown'}
                     </div>
                     <div className="card-content">
                       <h3>Issue</h3>
@@ -255,10 +318,10 @@ function NewsFileViewer() {
                       {(article.content || article.full_content || article.body) && (
                         <a
                           onClick={() => openModal(
-                            article.content || 
-                            article.full_content || 
-                            article.body || 
-                            article.description || 
+                            article.content ||
+                            article.full_content ||
+                            article.body ||
+                            article.description ||
                             'No detailed content available'
                           )}
                           className="source-link"
@@ -353,9 +416,9 @@ function NewsFileViewer() {
                 There are no reports to display at the moment. New reports will
                 appear here automatically.
               </p>
-              <button 
-                onClick={refreshNews} 
-                className="btn btn-secondary2" 
+              <button
+                onClick={refreshNews}
+                className="btn btn-secondary2"
                 style={{ marginTop: '20px' }}
               >
                 <span className="btn-icon">🔄</span>
@@ -371,16 +434,16 @@ function NewsFileViewer() {
       {showModal && (
         <Modal onClose={closeModal}>
           <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-            <h2 style={{ 
-              marginBottom: '20px', 
-              color: '#1e40af', 
-              borderBottom: '2px solid #e5e7eb', 
-              paddingBottom: '10px' 
+            <h2 style={{
+              marginBottom: '20px',
+              color: '#1e40af',
+              borderBottom: '2px solid #e5e7eb',
+              paddingBottom: '10px'
             }}>
               Detailed Article Content
             </h2>
-            <div 
-              className="modal-content-text" 
+            <div
+              className="modal-content-text"
               style={{ lineHeight: '1.8', fontSize: '16px' }}
               dangerouslySetInnerHTML={{ __html: modalContent }}
             />
