@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Authentcation.css";
-import logo from "../assets/ap-logo.png";
+import logo from "../assets/governmentLogo.png";
 import { toast } from "react-hot-toast"
 
 const Authentication = () => {
@@ -82,7 +82,7 @@ const Authentication = () => {
         {/* Left Section */}
         <div className="login-left">
           <img src={logo} alt="AP Logo" className="ap-logo" />
-          <h1>Real Time Governance</h1>
+          <h1>By Real Time Governance</h1>
           {/* <p>
             Secure, transparent, and efficient governance solutions powered by
             cutting-edge technology
