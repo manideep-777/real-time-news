@@ -594,3 +594,19 @@ body::after {
   transform: scale(1.05);
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
 }
+
+
+.search-input {
+  padding: 0.75rem 1rem;
+  width: 300px;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}

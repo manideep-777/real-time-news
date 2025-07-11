@@ -662,18 +662,19 @@ def fetch_news_job():
 
 if __name__ == "__main__":
 # Initialize and start the scheduler
-    # scheduler = BackgroundScheduler()
+    scheduler = BackgroundScheduler()
     # scheduler.add_job(func=fetch_news_job, trigger="interval", minutes=10)
-    # scheduler.start()
+    scheduler.add_job(fetch_news_job, trigger="cron", hour=6, minute=0)
+    scheduler.start()
 
     # # Initial run on startup
-    # with app.app_context():
-    #     fetch_news_job()
+    with app.app_context():
+        fetch_news_job()
 
     # # Shut down the scheduler when exiting the app
-    # atexit.register(lambda: scheduler.shutdown())
-    # app.run(debug=False, use_reloader=False)
-    app.run(debug=True)
+    atexit.register(lambda: scheduler.shutdown())
+    app.run(debug=False, use_reloader=False)
+    # app.run(debug=True)
 
 # To run this application in a production environment using IIS (Internet Information Services),
 # you will need to use a WSGI gateway like wfastcgi.
